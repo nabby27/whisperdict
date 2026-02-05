@@ -25,6 +25,7 @@ struct ModelState {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ConfigState {
     shortcut: String,
     active_model_id: String,
@@ -43,6 +44,7 @@ fn get_config(state: State<'_, AppState>) -> Result<ConfigState, String> {
 fn set_shortcut(state: State<'_, AppState>, shortcut: String) -> Result<(), String> {
     state.set_shortcut(&shortcut).map_err(|e| e.to_string())
 }
+
 
 #[tauri::command]
 async fn list_models(state: State<'_, AppState>) -> Result<Vec<ModelState>, String> {
@@ -79,8 +81,14 @@ async fn delete_model(state: State<'_, AppState>, id: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-fn set_active_model(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    state.set_active_model(&id).map_err(|e| e.to_string())
+fn set_active_model(state: State<'_, AppState>, app: AppHandle, id: String) -> Result<(), String> {
+    state.set_active_model(&id).map_err(|e| e.to_string())?;
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = handle.state::<AppState>();
+        let _ = state.preload_transcribe_server(&handle).await;
+    });
+    Ok(())
 }
 
 #[tauri::command]
@@ -110,6 +118,11 @@ pub fn run() {
             let handle = app.handle().clone();
             let _ = hotkeys::start_listener(handle, hotkey);
             app.manage(state);
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let state = handle.state::<AppState>();
+                let _ = state.preload_transcribe_server(&handle).await;
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -115,7 +115,7 @@ export function createMockEcoApi(): EcoApi {
         emitStatus({ status: "processing" });
         setTimeout(() => {
           emitTranscription({
-            text: "Transcripcion simulada: hola desde Eco.",
+            text: "Mock transcription: hello from Eco.",
             modelId: config.activeModelId,
             durationMs: 680,
           });

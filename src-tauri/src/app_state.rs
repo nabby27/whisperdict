@@ -181,6 +181,27 @@ impl AppState {
         Ok(self.config.lock().unwrap().clone())
     }
 
+    pub async fn preload_transcribe_server(&self, app: &AppHandle) -> Result<()> {
+        let model_id = self.config.lock().unwrap().active_model.clone();
+        if model_id == "none" {
+            return Ok(());
+        }
+        let model_path = models::model_path(&model_id)?;
+        if !models::model_is_valid(&model_id)? {
+            self.download_model(app, &model_id).await?;
+        }
+        let model_path_str = model_path.to_string_lossy().to_string();
+        let mut guard = self.transcribe.lock().unwrap();
+        let needs_restart = guard
+            .as_ref()
+            .map(|s| s.model_id != model_id)
+            .unwrap_or(true);
+        if needs_restart {
+            *guard = Some(spawn_server(&model_id, &model_path_str)?);
+        }
+        Ok(())
+    }
+
     pub fn set_shortcut(&self, shortcut: &str) -> Result<()> {
         let mut config = self.config.lock().unwrap();
         config.shortcut = shortcut.to_string();

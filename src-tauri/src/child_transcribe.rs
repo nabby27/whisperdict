@@ -36,9 +36,17 @@ pub fn run_if_child() -> Result<bool> {
 
 fn run_server(model_path: &str) -> Result<()> {
     let mut ctx_params = whisper_rs::WhisperContextParameters::default();
-    ctx_params.use_gpu(false);
-    let ctx = whisper_rs::WhisperContext::new_with_params(model_path, ctx_params)
-        .context("load model")?;
+    ctx_params.use_gpu(true);
+    let ctx = match whisper_rs::WhisperContext::new_with_params(model_path, ctx_params) {
+        Ok(ctx) => ctx,
+        Err(err) => {
+            eprintln!("eco-child: GPU init failed ({err}), falling back to CPU");
+            let mut cpu_params = whisper_rs::WhisperContextParameters::default();
+            cpu_params.use_gpu(false);
+            whisper_rs::WhisperContext::new_with_params(model_path, cpu_params)
+                .context("load model (cpu)")?
+        }
+    };
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     for line in stdin.lock().lines() {

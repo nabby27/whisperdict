@@ -9,9 +9,9 @@ import { createEcoApi, type EcoStatus, type ModelState } from "./lib/ecoApi";
 import { cn } from "./lib/utils";
 
 const statusLabels: Record<EcoStatus, string> = {
-  idle: "En Reposo",
-  recording: "Grabando",
-  processing: "Transcribiendo",
+  idle: "Idle",
+  recording: "Recording",
+  processing: "Transcribing",
   error: "Error",
 };
 
@@ -58,14 +58,14 @@ function App() {
         const message =
           error instanceof Error
             ? error.message
-            : "Tauri no está disponible. Abre la app de escritorio.";
+            : "Tauri is unavailable. Open the desktop app.";
         setStatusMessage(message);
       });
     refreshModels().catch((error) => {
       const message =
         error instanceof Error
           ? error.message
-          : "No se pudieron cargar los modelos. Intenta de nuevo.";
+          : "Models could not be loaded. Try again.";
       setStatusMessage(message);
     });
 
@@ -118,7 +118,7 @@ function App() {
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm(
-      "Eliminar este modelo borrará sus archivos locales. Continúa solo si quieres liberarlos."
+      "Deleting this model removes its local files. Continue only if you want to free them."
     );
     if (!confirmed) return;
     await api.deleteModel(id);
@@ -138,7 +138,7 @@ function App() {
       const message =
         error instanceof Error
           ? error.message
-          : "No se pudo iniciar el dictado. Intenta de nuevo.";
+          : "Recording could not start. Try again.";
       setStatusMessage(message);
     }
   };
@@ -148,14 +148,14 @@ function App() {
     try {
       await navigator.clipboard.writeText(testText);
     } catch {
-      setLastTranscript("No se pudo copiar. Selecciona el texto y copia manualmente.");
+      setLastTranscript("Copy failed. Select the text and copy manually.");
     }
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <a className="skip-link" href="#main">
-        Saltar al contenido
+        Skip to content
       </a>
       <div className="geist-grid">
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-8 sm:px-6 sm:py-10">
@@ -166,7 +166,7 @@ function App() {
                   ECO
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Estado</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <span
                       aria-hidden="true"
@@ -182,20 +182,20 @@ function App() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button data-testid="dictate-toggle" onClick={handleToggleRecording}>
-                  {status === "recording" ? "Detener Dictado" : "Iniciar Dictado"}
+                  {status === "recording" ? "Stop Dictation" : "Start Dictation"}
                 </Button>
                 <div className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted">
-                  Atajo: <span className="font-medium text-foreground">{shortcut}</span>
+                  Shortcut: <span className="font-medium text-foreground">{shortcut}</span>
                 </div>
               </div>
             </div>
             <div className="flex flex-col gap-3">
               <h1 className="text-balance text-4xl font-semibold text-foreground">
-                Dictado local, sin fricción.
+                Local dictation without friction.
               </h1>
               <p className="text-pretty text-base text-muted">
-                Eco transcribe tu voz en segundo plano. Controla el atajo, revisa el texto y gestiona
-                modelos sin salir de tu flujo.
+                Eco transcribes in the background. Control the shortcut, review text, and manage
+                models without breaking flow.
               </p>
               {statusMessage && (
                 <p className="text-sm text-danger" data-testid="status-message" aria-live="polite">
@@ -209,25 +209,25 @@ function App() {
             <section className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Texto</p>
-                  <p className="text-sm text-muted">Edita, copia y limpia en un solo lugar.</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Text</p>
+                  <p className="text-sm text-muted">Edit, copy, and clear in one place.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button data-testid="copy-button" variant="secondary" onClick={handleCopy}>
-                    Copiar
+                    Copy
                   </Button>
                   <Button
                     data-testid="clear-button"
                     variant="outline"
                     onClick={() => setTestText("")}
                   >
-                    Limpiar
+                    Clear
                   </Button>
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
                 <label htmlFor="test-textarea" className="text-xs font-semibold text-foreground">
-                  Área de Prueba
+                  Draft Area
                 </label>
                 <Textarea
                   id="test-textarea"
@@ -236,12 +236,12 @@ function App() {
                   ref={textareaRef}
                   value={testText}
                   onChange={(event) => setTestText(event.currentTarget.value)}
-                  placeholder="El texto transcrito aparecerá aquí…"
+                  placeholder="Transcribed text will appear here…"
                 />
               </div>
               <div className="rounded-xl border border-border bg-background-2 px-4 py-3 text-xs text-muted">
-                <span className="font-semibold text-foreground">Último dictado:</span>{" "}
-                {lastTranscript || "Aún no hay texto."}{" "}
+                <span className="font-semibold text-foreground">Last dictation:</span>{" "}
+                {lastTranscript || "No text yet."}{" "}
                 <span className="tabular-nums">
                   {lastDurationMs !== null
                     ? `· ${(lastDurationMs / 1000).toFixed(2)} s`
@@ -254,14 +254,14 @@ function App() {
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Atajo</p>
-                    <p className="text-sm text-muted">Configura tu combinación global.</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Shortcut</p>
+                    <p className="text-sm text-muted">Configure your global combo.</p>
                   </div>
-                  <Badge variant="default">Sistema</Badge>
+                  <Badge variant="default">System</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
                   <label htmlFor="shortcut" className="text-xs font-semibold text-foreground">
-                    Atajo Actual
+                    Current Shortcut
                   </label>
                   <Input
                     id="shortcut"
@@ -271,7 +271,7 @@ function App() {
                     autoComplete="off"
                     spellCheck={false}
                     onChange={(event) => setShortcut(event.currentTarget.value)}
-                    placeholder="Ej.: Ctrl+Alt+Space…"
+                    placeholder="e.g., Ctrl+Alt+Space…"
                   />
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -280,10 +280,10 @@ function App() {
                       onClick={handleSaveShortcut}
                       disabled={!shortcut.trim() || isSavingShortcut}
                     >
-                      {isSavingShortcut ? "Guardando…" : "Guardar"}
+                      {isSavingShortcut ? "Saving…" : "Save"}
                     </Button>
                     <Button variant="outline" onClick={() => setShortcut("Ctrl+Alt+Space")}>
-                      Restablecer
+                      Reset
                     </Button>
                   </div>
                 </div>
@@ -292,9 +292,9 @@ function App() {
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Modelos</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Models</p>
                     <p className="text-sm text-muted">
-                      Activo: {activeModel ? activeModel.title : "Sin Modelo"}
+                      Active: {activeModel ? activeModel.title : "No Model"}
                     </p>
                   </div>
                   <Badge variant="default">Whisper</Badge>
@@ -325,7 +325,7 @@ function App() {
                                 onClick={() => handleDownload(model.id)}
                                 disabled={progress > 0 && progress < 100}
                               >
-                                Descargar
+                                Download
                               </Button>
                             )}
                             {model.installed && !model.active && (
@@ -334,7 +334,7 @@ function App() {
                                 variant="secondary"
                                 onClick={() => handleUseModel(model.id)}
                               >
-                                Usar
+                                Use
                               </Button>
                             )}
                             {model.installed && (
@@ -343,18 +343,18 @@ function App() {
                                 variant="outline"
                                 onClick={() => handleDelete(model.id)}
                               >
-                                Eliminar
+                                Delete
                               </Button>
                             )}
                           </div>
                         </div>
-                        {model.active && <Badge variant="active">En Uso</Badge>}
-                        {model.partial && !model.installed && <Badge>Incompleto</Badge>}
+                        {model.active && <Badge variant="active">Active</Badge>}
+                        {model.partial && !model.installed && <Badge>Incomplete</Badge>}
                         {progress > 0 && progress < 100 && (
                           <div className="mt-3 space-y-2">
                             <Progress data-testid={`model-${model.id}-progress`} value={progress} />
                             <p className="text-xs text-muted tabular-nums">
-                              Descargando… {Math.round(progress)}%
+                              Downloading… {Math.round(progress)}%
                             </p>
                           </div>
                         )}
