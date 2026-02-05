@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import logo from "./assets/eco-logo.svg?url";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -83,13 +82,19 @@ function App() {
       setStatusMessage(payload.message ?? null);
     });
     const stopProgress = api.onProgress((payload) => {
+      if (payload.done) {
+        setDownloads((prev) => {
+          const next = { ...prev };
+          delete next[payload.id];
+          return next;
+        });
+        refreshModels().catch(() => undefined);
+        return;
+      }
       setDownloads((prev) => ({
         ...prev,
         [payload.id]: payload.ratio * 100,
       }));
-      if (payload.ratio >= 1) {
-        refreshModels().catch(() => undefined);
-      }
     });
     const stopTranscription = api.onTranscription((payload) => {
       setLastTranscript(payload.text);
@@ -120,7 +125,7 @@ function App() {
   };
 
   const handleDownload = async (id: string) => {
-    setDownloads((prev) => ({ ...prev, [id]: 1 }));
+    setDownloads((prev) => ({ ...prev, [id]: 0 }));
     await api.downloadModel(id);
     await refreshModels();
   };
@@ -172,7 +177,7 @@ function App() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card p-1">
-                  <img src={logo} alt="Eco" className="h-full w-full rounded-md" />
+                  <img src="/eco-logo.svg" alt="Eco" className="h-full w-full rounded-md" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
@@ -310,14 +315,14 @@ function App() {
                 </div>
                 <div className="mt-4 grid gap-3">
                   {models.map((model) => {
-                    const progress = downloads[model.id] || 0;
+                    const progress = downloads[model.id];
                     return (
                       <div
                         key={model.id}
                         data-testid={`model-${model.id}`}
                         className="rounded-lg border border-border bg-background-2 p-3"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
                               {model.title}
@@ -332,7 +337,7 @@ function App() {
                                 data-testid={`model-${model.id}-download`}
                                 variant="primary"
                                 onClick={() => handleDownload(model.id)}
-                                disabled={progress > 0 && progress < 100}
+                                disabled={progress !== undefined && progress < 100}
                               >
                                 Download
                               </Button>
@@ -357,11 +362,17 @@ function App() {
                             )}
                           </div>
                         </div>
-                        {model.active && <Badge variant="active">Active</Badge>}
-                        {model.partial && !model.installed && <Badge>Incomplete</Badge>}
-                        {progress > 0 && progress < 100 && (
-                          <div className="mt-3 space-y-2">
-                            <Progress data-testid={`model-${model.id}-progress`} value={progress} />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {model.active && <Badge variant="active">Active</Badge>}
+                          {model.partial && !model.installed && <Badge>Incomplete</Badge>}
+                        </div>
+                        {progress !== undefined && progress < 100 && (
+                          <div className="mt-3 w-full space-y-2">
+                            <Progress
+                              data-testid={`model-${model.id}-progress`}
+                              value={progress}
+                              className="w-full"
+                            />
                             <p className="text-xs text-muted tabular-nums">
                               Downloading… {Math.round(progress)}%
                             </p>

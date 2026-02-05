@@ -81,13 +81,14 @@ export function createMockEcoApi(): EcoApi {
             downloaded: progress,
             total: 100,
             ratio: progress / 100,
+            done: false,
           });
           if (progress >= 100) {
             clearInterval(interval);
             partials.delete(id);
             installed.add(id);
             config = { ...config, activeModelId: id };
-            emitProgress({ id, downloaded: 100, total: 100, ratio: 1 });
+            emitProgress({ id, downloaded: 100, total: 100, ratio: 1, done: true });
             resolve();
           }
         }, 180);

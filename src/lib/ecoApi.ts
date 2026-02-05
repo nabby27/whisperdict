@@ -38,6 +38,16 @@ export type ProgressPayload = {
   downloaded: number;
   total: number;
   ratio: number;
+  done: boolean;
+  error?: string;
+};
+
+type BackendProgressPayload = {
+  model_id: string;
+  downloaded: number;
+  total: number | null;
+  done: boolean;
+  error?: string | null;
 };
 
 export type TranscriptionPayload = {
@@ -91,7 +101,23 @@ export function createEcoApi(): EcoApi {
       };
     },
     onProgress: (cb) => {
-      const unlisten = listen<ProgressPayload>("models:progress", (event) => cb(event.payload));
+      const unlisten = listen<BackendProgressPayload>("models:progress", (event) => {
+        const payload = event.payload;
+        const total = payload.total ?? 0;
+        const ratio = payload.done
+          ? 1
+          : total > 0
+          ? Math.min(1, payload.downloaded / total)
+          : 0;
+        cb({
+          id: payload.model_id,
+          downloaded: payload.downloaded,
+          total,
+          ratio,
+          done: payload.done,
+          error: payload.error ?? undefined,
+        });
+      });
       return () => {
         unlisten.then((fn) => fn()).catch(() => undefined);
       };
