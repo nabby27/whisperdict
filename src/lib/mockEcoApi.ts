@@ -29,6 +29,7 @@ export function createMockEcoApi(): EcoApi {
   let config: ConfigState = {
     shortcut: "Ctrl+Alt+Space",
     activeModelId: "base",
+    language: "en",
   };
 
   const installed = new Set(["base"]);
@@ -65,6 +66,9 @@ export function createMockEcoApi(): EcoApi {
     },
     async setShortcut(shortcut) {
       config = { ...config, shortcut };
+    },
+    async setLanguage(language) {
+      config = { ...config, language };
     },
     async listModels() {
       return buildModelState();

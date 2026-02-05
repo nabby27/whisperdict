@@ -12,7 +12,7 @@ mod wayland_hotkeys;
 
 use app_state::{AppState, StatusResponse};
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{image::Image, AppHandle, Manager, State};
 
 #[derive(Serialize)]
 struct ModelState {
@@ -131,6 +131,11 @@ pub fn run() {
             let handle = app.handle().clone();
             let _ = hotkeys::start_listener(handle, hotkey);
             app.manage(state);
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(icon) = Image::from_bytes(include_bytes!("../icons-app/32x32.png")) {
+                    let _ = window.set_icon(icon);
+                }
+            }
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let state = handle.state::<AppState>();
