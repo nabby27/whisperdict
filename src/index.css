@@ -91,12 +91,12 @@ body {
   background-size: 56px 56px;
 }
 
-.eco-scrollbar::-webkit-scrollbar {
+.ECO-scrollbar::-webkit-scrollbar {
   height: 8px;
   width: 8px;
 }
 
-.eco-scrollbar::-webkit-scrollbar-thumb {
+.ECO-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(31, 35, 40, 0.15);
   border-radius: 999px;
 }

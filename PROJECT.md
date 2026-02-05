@@ -98,7 +98,7 @@ Tomar 2s de audio
 
 ### Estructura de archivos
 
-- Modelos: `~/.local/share/eco/models`.
+- Modelos: `~/.local/share/ECO/models`.
 
 ### Transcripcion (Whisper)
 
@@ -155,7 +155,7 @@ Tomar 2s de audio
 
 ### Configuracion y persistencia
 
-- Archivo JSON en `~/.config/eco/config.json`.
+- Archivo JSON en `~/.config/ECO/config.json`.
 - Guarda shortcut y modelo activo/preferido.
 
 ### UI y estados
@@ -181,4 +181,3 @@ Tomar 2s de audio
 
 - Flujos completos de UI (lista, descargar, borrar, cambiar atajo).
 - Transcripcion simulada con el audio real de pruebas.
-

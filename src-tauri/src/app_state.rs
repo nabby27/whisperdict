@@ -302,7 +302,7 @@ fn write_temp_wav(samples: &[f32]) -> Result<PathBuf> {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    path.push(format!("eco-{}.wav", stamp));
+    path.push(format!("ECO-{}.wav", stamp));
 
     let spec = hound::WavSpec {
         channels: 1,

@@ -40,7 +40,7 @@ fn run_server(model_path: &str) -> Result<()> {
     let ctx = match whisper_rs::WhisperContext::new_with_params(model_path, ctx_params) {
         Ok(ctx) => ctx,
         Err(err) => {
-            eprintln!("eco-child: GPU init failed ({err}), falling back to CPU");
+            eprintln!("ECO-child: GPU init failed ({err}), falling back to CPU");
             let mut cpu_params = whisper_rs::WhisperContextParameters::default();
             cpu_params.use_gpu(false);
             whisper_rs::WhisperContext::new_with_params(model_path, cpu_params)
@@ -57,7 +57,7 @@ fn run_server(model_path: &str) -> Result<()> {
         let text = match transcribe_wav_with_ctx(&ctx, &wav_path) {
             Ok(text) => text,
             Err(err) => {
-                eprintln!("eco-child: error {err}");
+                eprintln!("ECO-child: error {err}");
                 String::new()
             }
         };

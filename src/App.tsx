@@ -177,7 +177,7 @@ function App() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card p-1">
-                  <img src="/eco-logo.svg" alt="Eco" className="h-full w-full rounded-md" />
+                  <img src="/ECO-logo.svg" alt="ECO" className="h-full w-full rounded-md" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
