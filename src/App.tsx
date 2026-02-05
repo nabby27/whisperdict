@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import logo from "./assets/eco-logo.svg?url";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -50,24 +51,32 @@ function App() {
   };
 
   useEffect(() => {
-    api
-      .getConfig()
-      .then((config) => setShortcut(config.shortcut))
-      .catch((error) => {
+    const loadConfig = async () => {
+      try {
+        const config = await api.getConfig();
+        setShortcut(config.shortcut);
+      } catch (error) {
         setStatus("error");
         const message =
           error instanceof Error
             ? error.message
             : "Tauri is unavailable. Open the desktop app.";
         setStatusMessage(message);
-      });
-    refreshModels().catch((error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Models could not be loaded. Try again.";
-      setStatusMessage(message);
-    });
+      }
+    };
+    const loadModels = async () => {
+      try {
+        await refreshModels();
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Models could not be loaded. Try again.";
+        setStatusMessage(message);
+      }
+    };
+    loadConfig();
+    loadModels();
 
     const stopStatus = api.onStatus((payload) => {
       setStatus(payload.status);
@@ -162,8 +171,8 @@ function App() {
           <header className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card text-xs font-semibold">
-                  ECO
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card p-1">
+                  <img src={logo} alt="Eco" className="h-full w-full rounded-md" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
