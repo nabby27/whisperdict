@@ -6,7 +6,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"tex
   ({ className, ...props }, ref) => (
     <textarea
       className={cn(
-        "flex min-h-[140px] w-full rounded-2xl border border-ink/10 bg-white/80 px-4 py-3 text-sm font-medium text-ink shadow-soft transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+        "flex min-h-[160px] w-full rounded-md border border-border bg-background px-3 py-3 text-sm font-medium text-foreground shadow-subtle transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 focus-visible:border-foreground/30 disabled:cursor-not-allowed disabled:opacity-60",
         className
       )}
       ref={ref}

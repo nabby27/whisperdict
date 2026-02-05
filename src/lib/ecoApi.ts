@@ -14,6 +14,15 @@ export type ModelState = {
   active: boolean;
 };
 
+type BackendModelState = {
+  id: string;
+  title: string;
+  size_mb: number;
+  installed: boolean;
+  partial: boolean;
+  active: boolean;
+};
+
 export type ConfigState = {
   shortcut: string;
   activeModelId: string;
@@ -60,7 +69,17 @@ export function createEcoApi(): EcoApi {
   return {
     getConfig: () => invoke<ConfigState>("get_config"),
     setShortcut: (shortcut) => invoke("set_shortcut", { shortcut }),
-    listModels: () => invoke<ModelState[]>("list_models"),
+    listModels: async () => {
+      const models = await invoke<Array<ModelState | BackendModelState>>("list_models");
+      return models.map((model) => ({
+        id: model.id,
+        title: model.title,
+        sizeMb: "size_mb" in model ? model.size_mb : model.sizeMb,
+        installed: model.installed,
+        partial: model.partial,
+        active: model.active,
+      }));
+    },
     downloadModel: (id) => invoke("download_model", { id }),
     deleteModel: (id) => invoke("delete_model", { id }),
     setActiveModel: (id) => invoke("set_active_model", { id }),

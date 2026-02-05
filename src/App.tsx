@@ -2,26 +2,31 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Input } from "./components/ui/input";
 import { Progress } from "./components/ui/progress";
-import { Separator } from "./components/ui/separator";
 import { Textarea } from "./components/ui/textarea";
 import { createEcoApi, type EcoStatus, type ModelState } from "./lib/ecoApi";
 import { cn } from "./lib/utils";
 
 const statusLabels: Record<EcoStatus, string> = {
-  idle: "Reposo",
+  idle: "En Reposo",
   recording: "Grabando",
   processing: "Transcribiendo",
   error: "Error",
 };
 
 const statusColors: Record<EcoStatus, string> = {
-  idle: "text-sage",
-  recording: "text-ember",
-  processing: "text-clay",
-  error: "text-red-600",
+  idle: "text-success",
+  recording: "text-danger",
+  processing: "text-accent",
+  error: "text-danger",
+};
+
+const formatModelSize = (sizeMb: number) => {
+  if (!Number.isFinite(sizeMb)) return "--";
+  if (sizeMb < 1024) return `${Math.round(sizeMb)} MB`;
+  const sizeGb = sizeMb / 1024;
+  return `${sizeGb.toFixed(sizeGb >= 10 ? 1 : 2)} GB`;
 };
 
 function App() {
@@ -50,11 +55,17 @@ function App() {
       .then((config) => setShortcut(config.shortcut))
       .catch((error) => {
         setStatus("error");
-        const message = error instanceof Error ? error.message : "Tauri no disponible.";
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Tauri no está disponible. Abre la app de escritorio.";
         setStatusMessage(message);
       });
     refreshModels().catch((error) => {
-      const message = error instanceof Error ? error.message : "No se pudieron cargar modelos.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar los modelos. Intenta de nuevo.";
       setStatusMessage(message);
     });
 
@@ -106,6 +117,10 @@ function App() {
   };
 
   const handleDelete = async (id: string) => {
+    const confirmed = window.confirm(
+      "Eliminar este modelo borrará sus archivos locales. Continúa solo si quieres liberarlos."
+    );
+    if (!confirmed) return;
     await api.deleteModel(id);
     await refreshModels();
   };
@@ -120,7 +135,10 @@ function App() {
       await api.toggleRecording();
     } catch (error) {
       setStatus("error");
-      const message = error instanceof Error ? error.message : "No se pudo iniciar el dictado.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo iniciar el dictado. Intenta de nuevo.";
       setStatusMessage(message);
     }
   };
@@ -130,248 +148,224 @@ function App() {
     try {
       await navigator.clipboard.writeText(testText);
     } catch {
-      setLastTranscript("No se pudo copiar al portapapeles.");
+      setLastTranscript("No se pudo copiar. Selecciona el texto y copia manualmente.");
     }
   };
 
   return (
-    <div className="eco-grid min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
-        <header className="eco-panel flex flex-col gap-6 rounded-[32px] p-8 shadow-halo">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "eco-status-ring",
-                    statusColors[status],
-                    status === "recording" ? "animate-pulse-glow" : ""
-                  )}
-                />
-                <Badge
-                  data-testid="status-label"
-                  variant={status === "recording" ? "active" : "soft"}
-                >
-                  {statusLabels[status]}
-                </Badge>
+    <div className="min-h-screen bg-background text-foreground">
+      <a className="skip-link" href="#main">
+        Saltar al contenido
+      </a>
+      <div className="geist-grid">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-8 sm:px-6 sm:py-10">
+          <header className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card text-xs font-semibold">
+                  ECO
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Estado</p>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "status-dot",
+                        statusColors[status],
+                        status === "recording" ? "animate-status-pulse" : ""
+                      )}
+                    />
+                    <span>{statusLabels[status]}</span>
+                  </div>
+                </div>
               </div>
-              <h1 className="font-display text-4xl font-semibold text-ink">
-                Eco convierte tu voz en texto donde estes trabajando.
+              <div className="flex flex-wrap items-center gap-3">
+                <Button data-testid="dictate-toggle" onClick={handleToggleRecording}>
+                  {status === "recording" ? "Detener Dictado" : "Iniciar Dictado"}
+                </Button>
+                <div className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted">
+                  Atajo: <span className="font-medium text-foreground">{shortcut}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <h1 className="text-balance text-4xl font-semibold text-foreground">
+                Dictado local, sin fricción.
               </h1>
-              <p className="max-w-2xl text-base text-ink/70">
-                Dicta, revisa y pega sin cambiar de ventana. El motor de transcripcion se ejecuta
-                localmente y los modelos se descargan bajo demanda.
+              <p className="text-pretty text-base text-muted">
+                Eco transcribe tu voz en segundo plano. Controla el atajo, revisa el texto y gestiona
+                modelos sin salir de tu flujo.
               </p>
               {statusMessage && (
-                <p className="text-sm text-ember" data-testid="status-message">
+                <p className="text-sm text-danger" data-testid="status-message" aria-live="polite">
                   {statusMessage}
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-3">
-              <Button
-                data-testid="dictate-toggle"
-                className="w-full lg:w-auto"
-                onClick={handleToggleRecording}
-              >
-                {status === "recording" ? "Detener dictado" : "Iniciar dictado"}
-              </Button>
-              <div
-                data-testid="active-shortcut"
-                className="rounded-2xl border border-ink/10 bg-white/70 px-4 py-3 text-sm text-ink/70"
-              >
-                Atajo activo: <span className="font-semibold text-ink">{shortcut}</span>
-              </div>
-            </div>
-          </div>
-          <Separator />
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-ink/50">Modelo en uso</p>
-              <p className="text-2xl font-semibold text-ink">
-                {activeModel ? activeModel.title : "Sin modelo"}
-              </p>
-              <p className="text-sm text-ink/60">
-                {activeModel
-                  ? `${activeModel.sizeMb} MB · Optimo para ${
-                      activeModel.id === "tiny" || activeModel.id === "base"
-                        ? "velocidad"
-                        : "precision"
-                    }`
-                  : "Descarga un modelo para empezar."}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-ink/50">Modo actual</p>
-              <p className="text-2xl font-semibold text-ink">{statusLabels[status]}</p>
-              <p className="text-sm text-ink/60">
-                {status === "recording"
-                  ? "Grabando desde el microfono, vuelve a pulsar para transcribir."
-                  : status === "processing"
-                  ? "Transcribiendo audio de forma local."
-                  : "Listo para dictar con tu atajo global."}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-ink/50">Ultima transcripcion</p>
-              <p className="text-sm text-ink/70">{lastTranscript || "Aun no hay texto."}</p>
-              <p className="text-xs text-ink/50">
-                {lastDurationMs !== null
-                  ? `Tiempo de transcripcion: ${(lastDurationMs / 1000).toFixed(2)}s`
-                  : "Tiempo de transcripcion: --"}
-              </p>
-            </div>
-          </div>
-        </header>
+          </header>
 
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-          <Card className="h-full">
-            <CardHeader>
-              <div>
-                <CardTitle>Atajo global</CardTitle>
-                <p className="text-sm text-ink/60">
-                  Cambia la combinacion para iniciar y detener el dictado sin perder el foco.
-                </p>
-              </div>
-              <Badge variant="soft">Sistema</Badge>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <Input
-                data-testid="shortcut-input"
-                value={shortcut}
-                onChange={(event) => setShortcut(event.currentTarget.value)}
-                placeholder="Ctrl+Alt+Space"
-              />
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  data-testid="shortcut-save"
-                  variant="primary"
-                  onClick={handleSaveShortcut}
-                  disabled={!shortcut.trim() || isSavingShortcut}
-                >
-                  {isSavingShortcut ? "Guardando..." : "Guardar atajo"}
-                </Button>
-                <Button variant="outline" onClick={() => setShortcut("Ctrl+Alt+Space")}>
-                  Restablecer
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="h-full">
-            <CardHeader>
-              <div>
-                <CardTitle>Area de prueba</CardTitle>
-                <p className="text-sm text-ink/60">
-                  Comprueba el texto antes de pegarlo o copialo directamente.
-                </p>
-              </div>
-              <Badge variant="default">Entrada</Badge>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                data-testid="test-textarea"
-                ref={textareaRef}
-                value={testText}
-                onChange={(event) => setTestText(event.currentTarget.value)}
-                placeholder="El texto transcrito aparecera aqui..."
-              />
-              <div className="flex flex-wrap gap-3">
-                <Button data-testid="copy-button" variant="secondary" onClick={handleCopy}>
-                  Copiar
-                </Button>
-                <Button
-                  data-testid="clear-button"
-                  variant="outline"
-                  onClick={() => setTestText("")}
-                >
-                  Limpiar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Modelos locales</CardTitle>
-              <p className="text-sm text-ink/60">
-                Descarga el modelo adecuado para velocidad o precision. Elige uno activo para las
-                transcripciones.
-              </p>
-            </div>
-            <Badge variant="default">Whisper</Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {models.map((model) => {
-                const progress = downloads[model.id] || 0;
-                return (
-                  <div
-                    key={model.id}
-                    data-testid={`model-${model.id}`}
-                    className="eco-panel flex flex-col gap-4 rounded-2xl p-4 shadow-soft"
+          <main id="main" className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Texto</p>
+                  <p className="text-sm text-muted">Edita, copia y limpia en un solo lugar.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button data-testid="copy-button" variant="secondary" onClick={handleCopy}>
+                    Copiar
+                  </Button>
+                  <Button
+                    data-testid="clear-button"
+                    variant="outline"
+                    onClick={() => setTestText("")}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <p className="text-lg font-semibold text-ink">{model.title}</p>
-                          {model.active && <Badge variant="active">En uso</Badge>}
-                          {model.partial && !model.installed && <Badge>Incompleto</Badge>}
-                        </div>
-                        <p className="text-sm text-ink/60">{model.sizeMb} MB</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {!model.installed && (
-                          <Button
-                            data-testid={`model-${model.id}-download`}
-                            variant="primary"
-                            onClick={() => handleDownload(model.id)}
-                            disabled={progress > 0 && progress < 100}
-                          >
-                            Descargar
-                          </Button>
-                        )}
-                        {model.installed && !model.active && (
-                          <Button
-                            data-testid={`model-${model.id}-use`}
-                            variant="secondary"
-                            onClick={() => handleUseModel(model.id)}
-                          >
-                            Usar
-                          </Button>
-                        )}
-                        {model.installed && (
-                          <Button
-                            data-testid={`model-${model.id}-delete`}
-                            variant="outline"
-                            onClick={() => handleDelete(model.id)}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                        {model.partial && !model.installed && (
-                          <Button variant="outline" onClick={() => handleDelete(model.id)}>
-                            Limpiar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    {progress > 0 && progress < 100 && (
-                      <div className="space-y-2">
-                        <Progress data-testid={`model-${model.id}-progress`} value={progress} />
-                        <p className="text-xs text-ink/60">
-                          Descargando... {Math.round(progress)}%
-                        </p>
-                      </div>
-                    )}
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
+                <label htmlFor="test-textarea" className="text-xs font-semibold text-foreground">
+                  Área de Prueba
+                </label>
+                <Textarea
+                  id="test-textarea"
+                  name="transcription"
+                  data-testid="test-textarea"
+                  ref={textareaRef}
+                  value={testText}
+                  onChange={(event) => setTestText(event.currentTarget.value)}
+                  placeholder="El texto transcrito aparecerá aquí…"
+                />
+              </div>
+              <div className="rounded-xl border border-border bg-background-2 px-4 py-3 text-xs text-muted">
+                <span className="font-semibold text-foreground">Último dictado:</span>{" "}
+                {lastTranscript || "Aún no hay texto."}{" "}
+                <span className="tabular-nums">
+                  {lastDurationMs !== null
+                    ? `· ${(lastDurationMs / 1000).toFixed(2)} s`
+                    : "· --"}
+                </span>
+              </div>
+            </section>
+
+            <aside className="flex flex-col gap-6">
+              <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Atajo</p>
+                    <p className="text-sm text-muted">Configura tu combinación global.</p>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  <Badge variant="default">Sistema</Badge>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <label htmlFor="shortcut" className="text-xs font-semibold text-foreground">
+                    Atajo Actual
+                  </label>
+                  <Input
+                    id="shortcut"
+                    name="shortcut"
+                    data-testid="shortcut-input"
+                    value={shortcut}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(event) => setShortcut(event.currentTarget.value)}
+                    placeholder="Ej.: Ctrl+Alt+Space…"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      data-testid="shortcut-save"
+                      variant="primary"
+                      onClick={handleSaveShortcut}
+                      disabled={!shortcut.trim() || isSavingShortcut}
+                    >
+                      {isSavingShortcut ? "Guardando…" : "Guardar"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setShortcut("Ctrl+Alt+Space")}>
+                      Restablecer
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Modelos</p>
+                    <p className="text-sm text-muted">
+                      Activo: {activeModel ? activeModel.title : "Sin Modelo"}
+                    </p>
+                  </div>
+                  <Badge variant="default">Whisper</Badge>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {models.map((model) => {
+                    const progress = downloads[model.id] || 0;
+                    return (
+                      <div
+                        key={model.id}
+                        data-testid={`model-${model.id}`}
+                        className="rounded-lg border border-border bg-background-2 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {model.title}
+                            </p>
+                            <p className="text-xs text-foreground/70 tabular-nums">
+                              {formatModelSize(model.sizeMb)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {!model.installed && (
+                              <Button
+                                data-testid={`model-${model.id}-download`}
+                                variant="primary"
+                                onClick={() => handleDownload(model.id)}
+                                disabled={progress > 0 && progress < 100}
+                              >
+                                Descargar
+                              </Button>
+                            )}
+                            {model.installed && !model.active && (
+                              <Button
+                                data-testid={`model-${model.id}-use`}
+                                variant="secondary"
+                                onClick={() => handleUseModel(model.id)}
+                              >
+                                Usar
+                              </Button>
+                            )}
+                            {model.installed && (
+                              <Button
+                                data-testid={`model-${model.id}-delete`}
+                                variant="outline"
+                                onClick={() => handleDelete(model.id)}
+                              >
+                                Eliminar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {model.active && <Badge variant="active">En Uso</Badge>}
+                        {model.partial && !model.installed && <Badge>Incompleto</Badge>}
+                        {progress > 0 && progress < 100 && (
+                          <div className="mt-3 space-y-2">
+                            <Progress data-testid={`model-${model.id}-progress`} value={progress} />
+                            <p className="text-xs text-muted tabular-nums">
+                              Descargando… {Math.round(progress)}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </aside>
+          </main>
+        </div>
       </div>
     </div>
   );
