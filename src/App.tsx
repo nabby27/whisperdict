@@ -324,12 +324,20 @@ function App() {
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                              {model.title}
-                            </p>
-                            <p className="text-xs text-foreground/70 tabular-nums">
-                              {formatModelSize(model.sizeMb)}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div>
+                                <p className="truncate text-sm font-semibold text-foreground">
+                                  {model.title}
+                                </p>
+                                <p className="text-xs text-foreground/70 tabular-nums">
+                                  {formatModelSize(model.sizeMb)}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {model.active && <Badge variant="active">Active</Badge>}
+                                {model.partial && !model.installed && <Badge>Incomplete</Badge>}
+                              </div>
+                            </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {!model.installed && (
@@ -361,10 +369,6 @@ function App() {
                               </Button>
                             )}
                           </div>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {model.active && <Badge variant="active">Active</Badge>}
-                          {model.partial && !model.installed && <Badge>Incomplete</Badge>}
                         </div>
                         {progress !== undefined && progress < 100 && (
                           <div className="mt-3 w-full space-y-2">
