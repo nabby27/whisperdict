@@ -1,9 +1,13 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
 use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
+
+const ICON_SIZE: u32 = 16;
+const FRAME_MS: u64 = 140;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TrayMode {
@@ -40,7 +44,7 @@ impl TrayController {
             Ok(menu) => menu,
             Err(_) => return,
         };
-        let icon = build_icon(TrayMode::Idle, 0);
+        let icon = render_icon(TrayMode::Idle, 0);
         let tray = TrayIconBuilder::new()
             .icon(icon)
             .menu(&menu)
@@ -66,7 +70,7 @@ impl TrayController {
         if let Ok(mut guard) = self.mode.lock() {
             *guard = mode;
         }
-        let icon = build_icon(mode, 0);
+        let icon = render_icon(mode, 0);
         if let Ok(guard) = self.tray.lock() {
             if let Some(tray) = guard.as_ref() {
                 let _ = tray.set_icon(Some(icon));
@@ -79,36 +83,48 @@ impl TrayController {
         let tray_ref = self.tray.clone();
         tauri::async_runtime::spawn(async move {
             let mut frame: u8 = 0;
+            let mut last_mode = TrayMode::Idle;
             loop {
                 let mode = mode_ref.lock().map(|g| *g).unwrap_or(TrayMode::Idle);
-                if mode == TrayMode::Recording || mode == TrayMode::Processing {
-                    frame = frame.wrapping_add(1);
-                    let icon = build_icon(mode, frame);
+                if mode != last_mode {
+                    frame = 0;
+                    last_mode = mode;
+                    let icon = render_icon(mode, 0);
                     if let Ok(guard) = tray_ref.lock() {
                         if let Some(tray) = guard.as_ref() {
                             let _ = tray.set_icon(Some(icon));
                         }
                     }
                 }
-                tokio::time::sleep(Duration::from_millis(140)).await;
+
+                if mode == TrayMode::Recording || mode == TrayMode::Processing {
+                    frame = frame.wrapping_add(1);
+                    let icon = render_icon(mode, frame);
+                    if let Ok(guard) = tray_ref.lock() {
+                        if let Some(tray) = guard.as_ref() {
+                            let _ = tray.set_icon(Some(icon));
+                        }
+                    }
+                }
+
+                tokio::time::sleep(Duration::from_millis(FRAME_MS)).await;
             }
         });
     }
 }
 
-fn build_icon(mode: TrayMode, frame: u8) -> Image<'static> {
-    let size = 16u32;
-    let mut data = vec![0u8; (size * size * 4) as usize];
+fn render_icon(mode: TrayMode, frame: u8) -> Image<'static> {
+    let mut data = vec![0u8; (ICON_SIZE * ICON_SIZE * 4) as usize];
     clear(&mut data);
 
     match mode {
-        TrayMode::Idle => draw_eco(&mut data, size, (250, 250, 250, 255)),
-        TrayMode::Error => draw_eco(&mut data, size, (243, 18, 96, 255)),
-        TrayMode::Recording => draw_bars(&mut data, size, frame, (0, 112, 243, 255)),
-        TrayMode::Processing => draw_spinner(&mut data, size, frame, (0, 112, 243, 255)),
+        TrayMode::Idle => draw_eco(&mut data, ICON_SIZE, (250, 250, 250, 255)),
+        TrayMode::Error => draw_eco(&mut data, ICON_SIZE, (243, 18, 96, 255)),
+        TrayMode::Recording => draw_recording(&mut data, ICON_SIZE, frame),
+        TrayMode::Processing => draw_processing(&mut data, ICON_SIZE, frame),
     }
 
-    Image::new_owned(data, size, size)
+    Image::new_owned(data, ICON_SIZE, ICON_SIZE)
 }
 
 fn clear(data: &mut [u8]) {
@@ -141,7 +157,17 @@ fn draw_eco(data: &mut [u8], size: u32, color: (u8, u8, u8, u8)) {
     draw_letter(data, size, 11, 4, &o, r, g, b, a);
 }
 
-fn draw_letter(data: &mut [u8], size: u32, x0: i32, y0: i32, rows: &[u8; 7], r: u8, g: u8, b: u8, a: u8) {
+fn draw_letter(
+    data: &mut [u8],
+    size: u32,
+    x0: i32,
+    y0: i32,
+    rows: &[u8; 7],
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+) {
     for (row_idx, row) in rows.iter().enumerate() {
         for col in 0..4 {
             if row & (1 << (3 - col)) != 0 {
@@ -151,34 +177,102 @@ fn draw_letter(data: &mut [u8], size: u32, x0: i32, y0: i32, rows: &[u8; 7], r: 
     }
 }
 
-fn draw_bars(data: &mut [u8], size: u32, frame: u8, color: (u8, u8, u8, u8)) {
-    let (r, g, b, a) = color;
-    let bars = [2, 4, 6, 8, 10, 12, 14];
-    let heights = [3, 5, 7, 9, 7, 5, 3, 4, 6, 8, 6, 4];
-    let center = 8i32;
+fn draw_recording(data: &mut [u8], size: u32, frame: u8) {
+    let center = (size as i32 - 1) / 2;
+    let bars = [1, 3, 5, 7, 9, 11];
+    let frames: [[i32; 6]; 12] = [
+        [4, 7, 9, 8, 6, 4],
+        [5, 8, 10, 7, 5, 6],
+        [6, 6, 9, 11, 6, 5],
+        [4, 7, 8, 10, 7, 6],
+        [5, 9, 11, 9, 5, 4],
+        [6, 8, 10, 8, 6, 5],
+        [4, 6, 9, 11, 7, 6],
+        [5, 7, 8, 9, 6, 5],
+        [6, 9, 10, 8, 5, 4],
+        [4, 8, 11, 10, 6, 5],
+        [5, 7, 9, 8, 7, 6],
+        [6, 8, 10, 9, 5, 4],
+    ];
+    let heights = frames[(frame as usize) % frames.len()];
+
     for (i, x) in bars.iter().enumerate() {
-        let idx = (frame as usize + i * 2) % heights.len();
-        let h = heights[idx] as i32;
-        for y in (center - h / 2)..=(center + h / 2) {
-            set_pixel(data, size, *x as i32, y, r, g, b, a);
+        let h = heights[i];
+        let top = center - h / 2;
+        let bottom = center + h / 2;
+        for y in top..=bottom {
+            set_pixel(data, size, *x, y, 255, 255, 255, 255);
         }
     }
 }
 
-fn draw_spinner(data: &mut [u8], size: u32, frame: u8, color: (u8, u8, u8, u8)) {
-    let (r, g, b, a) = color;
-    let center = 8i32;
-    let points = [
-        (8, 2), (10, 3), (12, 5), (13, 8), (12, 11), (10, 13), (8, 14), (6, 13),
-        (4, 11), (3, 8), (4, 5), (6, 3),
-    ];
-    let start = (frame as usize) % points.len();
-    for i in 0..points.len() {
-        let idx = (start + i) % points.len();
-        let (x, y) = points[idx];
-        if i < 5 {
-            set_pixel(data, size, x, y, r, g, b, a);
+fn draw_processing(data: &mut [u8], size: u32, frame: u8) {
+    let center = (size as f32 - 1.0) / 2.0;
+    let radius = (size as f32 / 2.0) - 2.5;
+    let thickness = 1.4f32;
+    let start = (frame as f32 * 18.0) % 360.0;
+    let arc = 110.0 + ((frame as f32 * 0.12).sin() + 1.0) * 35.0;
+    let base_color = (159, 179, 240, 255);
+    let arc_color = (78, 105, 212, 255);
+
+    for y in 0..size as i32 {
+        for x in 0..size as i32 {
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let dist = (dx * dx + dy * dy).sqrt();
+            let edge = (dist - radius).abs();
+            if edge > thickness {
+                continue;
+            }
+            let mut angle = dy.atan2(dx) * 180.0 / std::f32::consts::PI;
+            if angle < 0.0 {
+                angle += 360.0;
+            }
+            let in_arc = angle_in_arc(angle, start, arc);
+            let feather = 1.0 - (edge / thickness).min(1.0);
+            let (r, g, b, a) = if in_arc { arc_color } else { base_color };
+            let blended = (a as f32 * feather).round() as u8;
+            set_pixel(data, size, x, y, r, g, b, blended);
         }
     }
-    set_pixel(data, size, center, center, r, g, b, a);
+}
+
+fn angle_in_arc(angle: f32, start: f32, arc: f32) -> bool {
+    let end = (start + arc) % 360.0;
+    if start <= end {
+        angle >= start && angle <= end
+    } else {
+        angle >= start || angle <= end
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{render_icon, TrayMode};
+
+    fn opaque_pixels(data: &[u8]) -> usize {
+        data.chunks_exact(4).filter(|px| px[3] > 0).count()
+    }
+
+    #[test]
+    fn idle_icon_renders_text() {
+        let image = render_icon(TrayMode::Idle, 0);
+        assert!(opaque_pixels(image.rgba()) > 20);
+    }
+
+    #[test]
+    fn recording_frames_change() {
+        let a = render_icon(TrayMode::Recording, 1).rgba().to_vec();
+        let b = render_icon(TrayMode::Recording, 8).rgba().to_vec();
+        assert_ne!(a, b);
+        assert!(opaque_pixels(&a) > 20);
+    }
+
+    #[test]
+    fn processing_frames_change() {
+        let a = render_icon(TrayMode::Processing, 1).rgba().to_vec();
+        let b = render_icon(TrayMode::Processing, 10).rgba().to_vec();
+        assert_ne!(a, b);
+        assert!(opaque_pixels(&a) > 20);
+    }
 }
