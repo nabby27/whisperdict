@@ -26,6 +26,7 @@ type BackendModelState = {
 export type ConfigState = {
   shortcut: string;
   activeModelId: string;
+  language: string;
 };
 
 export type StatusPayload = {
@@ -59,6 +60,7 @@ export type TranscriptionPayload = {
 export interface EcoApi {
   getConfig(): Promise<ConfigState>;
   setShortcut(shortcut: string): Promise<void>;
+  setLanguage(language: string): Promise<void>;
   listModels(): Promise<ModelState[]>;
   downloadModel(id: string): Promise<void>;
   deleteModel(id: string): Promise<void>;
@@ -79,6 +81,7 @@ export function createEcoApi(): EcoApi {
   return {
     getConfig: () => invoke<ConfigState>("get_config"),
     setShortcut: (shortcut) => invoke("set_shortcut", { shortcut }),
+    setLanguage: (language) => invoke("set_language", { language }),
     listModels: async () => {
       const models = await invoke<Array<ModelState | BackendModelState>>("list_models");
       return models.map((model) => ({

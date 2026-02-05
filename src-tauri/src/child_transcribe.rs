@@ -50,11 +50,16 @@ fn run_server(model_path: &str) -> Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     for line in stdin.lock().lines() {
-        let wav_path = line.context("read line")?;
-        if wav_path.trim().is_empty() {
+        let line = line.context("read line")?;
+        if line.trim().is_empty() {
             continue;
         }
-        let text = match transcribe_wav_with_ctx(&ctx, &wav_path) {
+        let (language, wav_path) = if let Some((lang, path)) = line.split_once('\t') {
+            (lang.trim().to_string(), path.trim().to_string())
+        } else {
+            ("en".to_string(), line.trim().to_string())
+        };
+        let text = match transcribe_wav_with_ctx(&ctx, &wav_path, &language) {
             Ok(text) => text,
             Err(err) => {
                 eprintln!("ECO-child: error {err}");
@@ -67,7 +72,11 @@ fn run_server(model_path: &str) -> Result<()> {
     Ok(())
 }
 
-fn transcribe_wav_with_ctx(ctx: &whisper_rs::WhisperContext, wav_path: &str) -> Result<String> {
+fn transcribe_wav_with_ctx(
+    ctx: &whisper_rs::WhisperContext,
+    wav_path: &str,
+    language: &str,
+) -> Result<String> {
     let reader = hound::WavReader::open(wav_path).context("open wav")?;
     let spec = reader.spec();
     if spec.channels != 1 || spec.sample_rate != 16000 {
@@ -80,6 +89,7 @@ fn transcribe_wav_with_ctx(ctx: &whisper_rs::WhisperContext, wav_path: &str) -> 
         samples.push(sample);
     }
 
-    let text = transcribe_with_context(ctx, &samples, Some("es"), false).context("transcribe")?;
+    let lang = if language.is_empty() { "en" } else { language };
+    let text = transcribe_with_context(ctx, &samples, Some(lang), false).context("transcribe")?;
     Ok(text)
 }

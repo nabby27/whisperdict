@@ -22,6 +22,108 @@ const statusColors: Record<EcoStatus, string> = {
   error: "text-danger",
 };
 
+const LANGUAGE_OPTIONS = [
+  { code: "af", label: "Afrikaans" },
+  { code: "am", label: "Amharic" },
+  { code: "ar", label: "Arabic" },
+  { code: "as", label: "Assamese" },
+  { code: "az", label: "Azerbaijani" },
+  { code: "ba", label: "Bashkir" },
+  { code: "be", label: "Belarusian" },
+  { code: "bg", label: "Bulgarian" },
+  { code: "bn", label: "Bengali" },
+  { code: "bo", label: "Tibetan" },
+  { code: "br", label: "Breton" },
+  { code: "bs", label: "Bosnian" },
+  { code: "ca", label: "Catalan" },
+  { code: "cs", label: "Czech" },
+  { code: "cy", label: "Welsh" },
+  { code: "da", label: "Danish" },
+  { code: "de", label: "German" },
+  { code: "el", label: "Greek" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "et", label: "Estonian" },
+  { code: "eu", label: "Basque" },
+  { code: "fa", label: "Persian" },
+  { code: "fi", label: "Finnish" },
+  { code: "fo", label: "Faroese" },
+  { code: "fr", label: "French" },
+  { code: "gl", label: "Galician" },
+  { code: "gu", label: "Gujarati" },
+  { code: "ha", label: "Hausa" },
+  { code: "haw", label: "Hawaiian" },
+  { code: "he", label: "Hebrew" },
+  { code: "hi", label: "Hindi" },
+  { code: "hr", label: "Croatian" },
+  { code: "ht", label: "Haitian Creole" },
+  { code: "hu", label: "Hungarian" },
+  { code: "hy", label: "Armenian" },
+  { code: "id", label: "Indonesian" },
+  { code: "is", label: "Icelandic" },
+  { code: "it", label: "Italian" },
+  { code: "ja", label: "Japanese" },
+  { code: "jw", label: "Javanese" },
+  { code: "ka", label: "Georgian" },
+  { code: "kk", label: "Kazakh" },
+  { code: "km", label: "Khmer" },
+  { code: "kn", label: "Kannada" },
+  { code: "ko", label: "Korean" },
+  { code: "la", label: "Latin" },
+  { code: "lb", label: "Luxembourgish" },
+  { code: "ln", label: "Lingala" },
+  { code: "lo", label: "Lao" },
+  { code: "lt", label: "Lithuanian" },
+  { code: "lv", label: "Latvian" },
+  { code: "mg", label: "Malagasy" },
+  { code: "mi", label: "Maori" },
+  { code: "mk", label: "Macedonian" },
+  { code: "ml", label: "Malayalam" },
+  { code: "mn", label: "Mongolian" },
+  { code: "mr", label: "Marathi" },
+  { code: "ms", label: "Malay" },
+  { code: "mt", label: "Maltese" },
+  { code: "my", label: "Myanmar" },
+  { code: "ne", label: "Nepali" },
+  { code: "nl", label: "Dutch" },
+  { code: "nn", label: "Norwegian Nynorsk" },
+  { code: "no", label: "Norwegian" },
+  { code: "oc", label: "Occitan" },
+  { code: "pa", label: "Punjabi" },
+  { code: "pl", label: "Polish" },
+  { code: "ps", label: "Pashto" },
+  { code: "pt", label: "Portuguese" },
+  { code: "ro", label: "Romanian" },
+  { code: "ru", label: "Russian" },
+  { code: "sa", label: "Sanskrit" },
+  { code: "sd", label: "Sindhi" },
+  { code: "si", label: "Sinhala" },
+  { code: "sk", label: "Slovak" },
+  { code: "sl", label: "Slovenian" },
+  { code: "sn", label: "Shona" },
+  { code: "so", label: "Somali" },
+  { code: "sq", label: "Albanian" },
+  { code: "sr", label: "Serbian" },
+  { code: "su", label: "Sundanese" },
+  { code: "sv", label: "Swedish" },
+  { code: "sw", label: "Swahili" },
+  { code: "ta", label: "Tamil" },
+  { code: "te", label: "Telugu" },
+  { code: "tg", label: "Tajik" },
+  { code: "th", label: "Thai" },
+  { code: "tk", label: "Turkmen" },
+  { code: "tl", label: "Tagalog" },
+  { code: "tr", label: "Turkish" },
+  { code: "tt", label: "Tatar" },
+  { code: "uk", label: "Ukrainian" },
+  { code: "ur", label: "Urdu" },
+  { code: "uz", label: "Uzbek" },
+  { code: "vi", label: "Vietnamese" },
+  { code: "yi", label: "Yiddish" },
+  { code: "yo", label: "Yoruba" },
+  { code: "zh", label: "Chinese" },
+];
+
 const formatModelSize = (sizeMb: number) => {
   if (!Number.isFinite(sizeMb)) return "--";
   if (sizeMb < 1024) return `${Math.round(sizeMb)} MB`;
@@ -33,6 +135,8 @@ function App() {
   const api = useMemo(() => createEcoApi(), []);
   const [models, setModels] = useState<ModelState[]>([]);
   const [shortcut, setShortcut] = useState("Ctrl+Alt+Space");
+  const [language, setLanguage] = useState("en");
+  const [languageInput, setLanguageInput] = useState("English (en)");
   const [status, setStatus] = useState<EcoStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<Record<string, number>>({});
@@ -54,6 +158,9 @@ function App() {
       try {
         const config = await api.getConfig();
         setShortcut(config.shortcut);
+        const code = config.language || "en";
+        setLanguage(code);
+        setLanguageInput(getLanguageLabel(code));
       } catch (error) {
         setStatus("error");
         const message =
@@ -119,9 +226,36 @@ function App() {
     setIsSavingShortcut(true);
     try {
       await api.setShortcut(shortcut.trim());
+      await api.setLanguage(language);
     } finally {
       setIsSavingShortcut(false);
     }
+  };
+
+  const handleLanguageChange = async (value: string) => {
+    setLanguageInput(value);
+    const match = resolveLanguageCode(value);
+    if (match) {
+      setLanguage(match);
+      await api.setLanguage(match);
+    }
+  };
+
+  const getLanguageLabel = (code: string) => {
+    const option = LANGUAGE_OPTIONS.find((item) => item.code === code);
+    return option ? `${option.label} (${option.code})` : code;
+  };
+
+  const resolveLanguageCode = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    const direct = LANGUAGE_OPTIONS.find((item) => item.code === normalized);
+    if (direct) return direct.code;
+    const fromLabel = LANGUAGE_OPTIONS.find(
+      (item) => `${item.label} (${item.code})`.toLowerCase() === normalized
+    );
+    if (fromLabel) return fromLabel.code;
+    const loose = LANGUAGE_OPTIONS.find((item) => item.label.toLowerCase() === normalized);
+    return loose?.code;
   };
 
   const handleDownload = async (id: string) => {
@@ -299,6 +433,27 @@ function App() {
                     <Button variant="outline" onClick={() => setShortcut("Ctrl+Alt+Space")}>
                       Reset
                     </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="language" className="text-xs font-semibold text-foreground">
+                      Language
+                    </label>
+                    <Input
+                      id="language"
+                      name="language"
+                      list="language-options"
+                      value={languageInput}
+                      onChange={(event) => handleLanguageChange(event.currentTarget.value)}
+                      placeholder="English (en)"
+                    />
+                    <datalist id="language-options">
+                      {LANGUAGE_OPTIONS.map((option) => (
+                        <option
+                          key={option.code}
+                          value={`${option.label} (${option.code})`}
+                        />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
               </div>

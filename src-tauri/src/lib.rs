@@ -29,6 +29,7 @@ struct ModelState {
 struct ConfigState {
     shortcut: String,
     active_model_id: String,
+    language: String,
 }
 
 #[tauri::command]
@@ -37,12 +38,18 @@ fn get_config(state: State<'_, AppState>) -> Result<ConfigState, String> {
     Ok(ConfigState {
         shortcut: config.shortcut,
         active_model_id: config.active_model,
+        language: config.language,
     })
 }
 
 #[tauri::command]
 fn set_shortcut(state: State<'_, AppState>, shortcut: String) -> Result<(), String> {
     state.set_shortcut(&shortcut).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_language(state: State<'_, AppState>, language: String) -> Result<(), String> {
+    state.set_language(&language).map_err(|e| e.to_string())
 }
 
 
@@ -134,6 +141,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_config,
             set_shortcut,
+            set_language,
             list_models,
             download_model,
             delete_model,

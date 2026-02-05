@@ -181,8 +181,16 @@ impl AppState {
         Ok(self.config.lock().unwrap().clone())
     }
 
+    pub fn set_language(&self, language: &str) -> Result<()> {
+        let mut config = self.config.lock().unwrap();
+        config.language = language.to_string();
+        save_config(&config)?;
+        Ok(())
+    }
+
     pub async fn preload_transcribe_server(&self, app: &AppHandle) -> Result<()> {
-        let model_id = self.config.lock().unwrap().active_model.clone();
+        let config = self.config.lock().unwrap().clone();
+        let model_id = config.active_model.clone();
         if model_id == "none" {
             return Ok(());
         }
@@ -248,7 +256,8 @@ impl AppState {
             self.tray.set_mode(TrayMode::Idle);
             return Ok(String::new());
         }
-        let model_id = self.config.lock().unwrap().active_model.clone();
+        let config = self.config.lock().unwrap().clone();
+        let model_id = config.active_model.clone();
         let model_path = models::model_path(&model_id)?;
         if !models::model_is_valid(&model_id)? {
             self.download_model(app, &model_id).await?;
@@ -259,8 +268,15 @@ impl AppState {
         let server = self.transcribe.clone();
         let model_id_clone = model_id.clone();
         let start = std::time::Instant::now();
+        let language = config.language.clone();
         let text_result = task::spawn_blocking(move || {
-            transcribe_with_server(server, &model_id_clone, &model_path_str, &wav_path_str)
+            transcribe_with_server(
+                server,
+                &model_id_clone,
+                &model_path_str,
+                &wav_path_str,
+                &language,
+            )
         })
         .await
         .context("transcribe task")?;
@@ -331,6 +347,7 @@ fn transcribe_with_server(
     model_id: &str,
     model_path: &str,
     wav_path: &str,
+    language: &str,
 ) -> Result<String> {
     let mut guard = server.lock().unwrap();
     let needs_restart = guard
@@ -343,14 +360,15 @@ fn transcribe_with_server(
     }
 
     let srv = guard.as_mut().context("missing server")?;
-    writeln!(srv.stdin, "{}", wav_path).context("write wav path")?;
+    writeln!(srv.stdin, "{}\t{}", language, wav_path).context("write wav path")?;
     srv.stdin.flush().context("flush stdin")?;
     let mut line = String::new();
     let read = srv.stdout.read_line(&mut line).context("read child")?;
     if read == 0 || line.trim().is_empty() {
         *guard = Some(spawn_server(model_id, model_path)?);
         let srv = guard.as_mut().context("missing server")?;
-        writeln!(srv.stdin, "{}", wav_path).context("write wav path retry")?;
+        writeln!(srv.stdin, "{}\t{}", language, wav_path)
+            .context("write wav path retry")?;
         srv.stdin.flush().context("flush stdin retry")?;
         line.clear();
         srv.stdout.read_line(&mut line).context("read child retry")?;

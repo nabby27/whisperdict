@@ -5,10 +5,12 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
     pub shortcut: String,
     pub active_model: String,
     pub preferred_model: String,
+    pub language: String,
 }
 
 impl Default for AppConfig {
@@ -17,6 +19,7 @@ impl Default for AppConfig {
             shortcut: "Ctrl+Alt+Space".to_string(),
             active_model: "base".to_string(),
             preferred_model: "base".to_string(),
+            language: "en".to_string(),
         }
     }
 }
