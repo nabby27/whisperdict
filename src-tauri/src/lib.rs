@@ -111,6 +111,12 @@ fn get_status(state: State<'_, AppState>) -> Result<StatusResponse, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .setup(|app| {
             let state = AppState::new(&app.handle()).map_err(|e| e.to_string())?;
             state.tray.init(&app.handle());

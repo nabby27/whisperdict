@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::image::Image;
-use tauri::menu::Menu;
+use tauri::menu::{MenuBuilder, MenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder, TrayIconEvent};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TrayMode {
@@ -28,7 +28,15 @@ impl TrayController {
     }
 
     pub fn init(&self, app: &AppHandle) {
-        let menu = match Menu::new(app) {
+        let show_item = match MenuItem::with_id(app, "show", "Show", true, None::<&str>) {
+            Ok(item) => item,
+            Err(_) => return,
+        };
+        let quit_item = match MenuItem::with_id(app, "quit", "Quit", true, None::<&str>) {
+            Ok(item) => item,
+            Err(_) => return,
+        };
+        let menu = match MenuBuilder::new(app).items(&[&show_item, &quit_item]).build() {
             Ok(menu) => menu,
             Err(_) => return,
         };
@@ -36,6 +44,16 @@ impl TrayController {
         let tray = TrayIconBuilder::new()
             .icon(icon)
             .menu(&menu)
+            .on_menu_event(|app, event| match event.id().as_ref() {
+                "show" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                "quit" => app.exit(0),
+                _ => {}
+            })
             .on_tray_icon_event(|_tray, _event: TrayIconEvent| {})
             .build(app)
             .ok();
