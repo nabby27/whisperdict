@@ -114,12 +114,18 @@ impl TrayController {
 }
 
 fn render_icon(mode: TrayMode, frame: u8) -> Image<'static> {
+    if matches!(mode, TrayMode::Idle | TrayMode::Error) {
+        if let Ok(icon) = Image::from_bytes(include_bytes!("../../public/whisperdict-logo.png")) {
+            return icon;
+        }
+    }
+
     let mut data = vec![0u8; (ICON_SIZE * ICON_SIZE * 4) as usize];
     clear(&mut data);
 
     match mode {
-        TrayMode::Idle => draw_eco(&mut data, ICON_SIZE, (250, 250, 250, 255)),
-        TrayMode::Error => draw_eco(&mut data, ICON_SIZE, (243, 18, 96, 255)),
+        TrayMode::Idle => draw_fallback_mark(&mut data, ICON_SIZE, (250, 250, 250, 255)),
+        TrayMode::Error => draw_fallback_mark(&mut data, ICON_SIZE, (243, 18, 96, 255)),
         TrayMode::Recording => draw_recording(&mut data, ICON_SIZE, frame),
         TrayMode::Processing => draw_processing(&mut data, ICON_SIZE, frame),
     }
@@ -147,33 +153,40 @@ fn set_pixel(data: &mut [u8], size: u32, x: i32, y: i32, r: u8, g: u8, b: u8, a:
     data[idx + 3] = a;
 }
 
-fn draw_eco(data: &mut [u8], size: u32, color: (u8, u8, u8, u8)) {
+fn draw_fallback_mark(data: &mut [u8], size: u32, color: (u8, u8, u8, u8)) {
     let (r, g, b, a) = color;
-    let e = [0b1111, 0b1000, 0b1000, 0b1110, 0b1000, 0b1000, 0b1111];
-    let c = [0b0111, 0b1000, 0b1000, 0b1000, 0b1000, 0b1000, 0b0111];
-    let o = [0b0110, 0b1001, 0b1001, 0b1001, 0b1001, 0b1001, 0b0110];
-    draw_letter(data, size, 1, 4, &e, r, g, b, a);
-    draw_letter(data, size, 6, 4, &c, r, g, b, a);
-    draw_letter(data, size, 11, 4, &o, r, g, b, a);
-}
+    let w_left = [
+        (2, 3),
+        (2, 4),
+        (2, 5),
+        (2, 6),
+        (2, 7),
+        (2, 8),
+        (3, 9),
+        (4, 10),
+    ];
+    let w_mid = [
+        (6, 6),
+        (6, 7),
+        (6, 8),
+        (7, 9),
+        (8, 8),
+        (8, 7),
+        (8, 6),
+    ];
+    let w_right = [
+        (11, 3),
+        (11, 4),
+        (11, 5),
+        (11, 6),
+        (11, 7),
+        (11, 8),
+        (10, 9),
+        (9, 10),
+    ];
 
-fn draw_letter(
-    data: &mut [u8],
-    size: u32,
-    x0: i32,
-    y0: i32,
-    rows: &[u8; 7],
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
-) {
-    for (row_idx, row) in rows.iter().enumerate() {
-        for col in 0..4 {
-            if row & (1 << (3 - col)) != 0 {
-                set_pixel(data, size, x0 + col as i32, y0 + row_idx as i32, r, g, b, a);
-            }
-        }
+    for (x, y) in w_left.iter().chain(w_mid.iter()).chain(w_right.iter()) {
+        set_pixel(data, size, *x, *y, r, g, b, a);
     }
 }
 
@@ -255,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn idle_icon_renders_text() {
+    fn idle_icon_renders_mark() {
         let image = render_icon(TrayMode::Idle, 0);
         assert!(opaque_pixels(image.rgba()) > 20);
     }

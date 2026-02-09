@@ -161,9 +161,13 @@ fn get_status(state: State<'_, AppState>) -> Result<StatusResponse, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_opener::init());
+
+    if let (Some(_), Some(pubkey)) = (UPDATER_ENDPOINT, UPDATER_PUBKEY) {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
+    }
+
+    builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

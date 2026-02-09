@@ -317,8 +317,12 @@ function App() {
           <header className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card p-1">
-                  <img src="/whisperdict-logo.svg" alt="Whisperdict" className="h-full w-full rounded-md" />
+                <div className="flex h-10 w-10 items-center justify-center p-1">
+                  <img
+                    src="/whisperdict-logo.png"
+                    alt="Whisperdict"
+                    className="h-full w-full rounded-md object-contain"
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
