@@ -1,0 +1,89 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxkbcommon-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev pkg-config libssl-dev libasound2-dev libxdo-dev
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Ensure tag matches app versions
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+
+          const tagVersion = process.env.GITHUB_REF_NAME.replace(/^v/, '');
+          const packageVersion = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+          const tauriConfigVersion = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8')).version;
+          const cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+          const cargoVersionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+
+          if (!cargoVersionMatch) {
+            console.error('Could not find version in src-tauri/Cargo.toml');
+            process.exit(1);
+          }
+
+          const cargoVersion = cargoVersionMatch[1];
+          const versions = [
+            ['tag', tagVersion],
+            ['package.json', packageVersion],
+            ['Cargo.toml', cargoVersion],
+            ['tauri.conf.json', tauriConfigVersion],
+          ];
+
+          const allMatch = versions.every(([, value]) => value === tagVersion);
+          if (!allMatch) {
+            console.error('Version mismatch detected:');
+            for (const [source, value] of versions) {
+              console.error(`- ${source}: ${value}`);
+            }
+            process.exit(1);
+          }
+          EOF
+
+      - name: Build and publish Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          ECO_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+          ECO_UPDATER_PUBKEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ECO ${{ github.ref_name }}
+          releaseBody: See assets for installers and updater files.
+          releaseDraft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          args: --bundles appimage

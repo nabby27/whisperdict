@@ -26,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons-app/32x32.png",
@@ -34,5 +35,8 @@
       "icons-app/icon.icns",
       "icons-app/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {}
   }
 }

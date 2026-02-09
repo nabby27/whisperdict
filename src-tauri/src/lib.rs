@@ -13,6 +13,10 @@ mod wayland_hotkeys;
 use app_state::{AppState, StatusResponse};
 use serde::Serialize;
 use tauri::{image::Image, AppHandle, Manager, State};
+use tauri_plugin_updater::UpdaterExt;
+
+const UPDATER_ENDPOINT: Option<&str> = option_env!("ECO_UPDATER_ENDPOINT");
+const UPDATER_PUBKEY: Option<&str> = option_env!("ECO_UPDATER_PUBKEY");
 
 #[derive(Serialize)]
 struct ModelState {
@@ -52,6 +56,45 @@ fn set_shortcut(state: State<'_, AppState>, shortcut: String) -> Result<(), Stri
 #[tauri::command]
 fn set_language(state: State<'_, AppState>, language: String) -> Result<(), String> {
     state.set_language(&language).map_err(|e| e.to_string())
+}
+
+async fn check_for_updates(app: AppHandle) {
+    let Some(endpoint) = UPDATER_ENDPOINT else {
+        return;
+    };
+    let Some(pubkey) = UPDATER_PUBKEY else {
+        return;
+    };
+
+    let endpoint = match endpoint.parse() {
+        Ok(endpoint) => endpoint,
+        Err(_) => return,
+    };
+
+    let updater = match app
+        .updater_builder()
+        .pubkey(pubkey)
+        .endpoints(vec![endpoint])
+    {
+        Ok(builder) => builder,
+        Err(_) => return,
+    };
+
+    let updater = match updater.build() {
+        Ok(updater) => updater,
+        Err(_) => return,
+    };
+
+    let update = match updater.check().await {
+        Ok(update) => update,
+        Err(_) => return,
+    };
+
+    if let Some(update) = update {
+        if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
+            app.restart();
+        }
+    }
 }
 
 
@@ -120,6 +163,7 @@ fn get_status(state: State<'_, AppState>) -> Result<StatusResponse, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -142,6 +186,10 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let state = handle.state::<AppState>();
                 let _ = state.preload_transcribe_server(&handle).await;
+            });
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                check_for_updates(handle).await;
             });
             Ok(())
         })
