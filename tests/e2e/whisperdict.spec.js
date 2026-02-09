@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Eco app", () => {
+test.describe("Whisperdict app", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });

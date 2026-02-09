@@ -83,7 +83,7 @@ async fn bind_shortcut(
 ) -> Result<()> {
     let shortcut = normalize_shortcut(shortcut);
     let shortcuts = [
-        NewShortcut::new("toggle-recording", "Iniciar o detener Eco")
+        NewShortcut::new("toggle-recording", "Iniciar o detener Whisperdict")
             .preferred_trigger(Some(shortcut.as_str())),
     ];
     let request = proxy.bind_shortcuts(session, &shortcuts, None).await?;

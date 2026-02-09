@@ -81,11 +81,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          ECO_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
-          ECO_UPDATER_PUBKEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          WHISPERDICT_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+          WHISPERDICT_UPDATER_PUBKEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: ECO ${{ github.ref_name }}
+          releaseName: Whisperdict ${{ github.ref_name }}
           releaseBody: See assets for installers and updater files.
           releaseDraft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -106,5 +106,5 @@ jobs:
           body: ${{ steps.changelog.outputs.changelog }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
-          name: ECO ${{ github.ref_name }}
+          name: Whisperdict ${{ github.ref_name }}
           token: ${{ secrets.GH_TOKEN || github.token }}

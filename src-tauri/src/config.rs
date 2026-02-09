@@ -28,7 +28,7 @@ impl Default for AppConfig {
 
 pub fn config_path() -> Result<PathBuf> {
     let dirs = BaseDirs::new().context("missing base dirs")?;
-    let dir = dirs.config_dir().join("ECO");
+    let dir = dirs.config_dir().join("Whisperdict");
     fs::create_dir_all(&dir).context("create config dir")?;
     Ok(dir.join("config.json"))
 }

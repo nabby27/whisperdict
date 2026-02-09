@@ -1,8 +1,8 @@
-# Eco
+# Whisperdict
 
 ## Vision y descripcion para usuarios
 
-Eco es una aplicacion de escritorio para Linux que transcribe audio del microfono y pega el texto automaticamente donde tengas el cursor. Se usa con un atajo global de teclado para iniciar y detener la grabacion. El objetivo es poder dictar texto en cualquier aplicacion (navegador, editor, chat, formularios) sin cambiar de ventana.
+Whisperdict es una aplicacion de escritorio para Linux que transcribe audio del microfono y pega el texto automaticamente donde tengas el cursor. Se usa con un atajo global de teclado para iniciar y detener la grabacion. El objetivo es poder dictar texto en cualquier aplicacion (navegador, editor, chat, formularios) sin cambiar de ventana.
 
 ### Que hace
 
@@ -42,19 +42,19 @@ Eco es una aplicacion de escritorio para Linux que transcribe audio del microfon
 
 ```text
 Usuario pulsa atajo
-  -> Eco inicia grabacion
+  -> Whisperdict inicia grabacion
   -> Tray cambia a modo grabando
 Usuario pulsa atajo
-  -> Eco detiene grabacion
-  -> Eco transcribe (local)
-  -> Eco pega en el foco actual
+  -> Whisperdict detiene grabacion
+  -> Whisperdict transcribe (local)
+  -> Whisperdict pega en el foco actual
 ```
 
 ### Flujo de descarga de modelos
 
 ```text
 Usuario pulsa "Descargar" en un modelo
-  -> Eco inicia descarga
+  -> Whisperdict inicia descarga
   -> UI muestra progreso
   -> Archivo .part mientras descarga
   -> Si finaliza: renombra a .bin, marca instalado y lo usa
@@ -98,7 +98,7 @@ Tomar 2s de audio
 
 ### Estructura de archivos
 
-- Modelos: `~/.local/share/ECO/models`.
+- Modelos: `~/.local/share/Whisperdict/models`.
 
 ### Transcripcion (Whisper)
 
@@ -155,7 +155,7 @@ Tomar 2s de audio
 
 ### Configuracion y persistencia
 
-- Archivo JSON en `~/.config/ECO/config.json`.
+- Archivo JSON en `~/.config/Whisperdict/config.json`.
 - Guarda shortcut y modelo activo/preferido.
 
 ### UI y estados

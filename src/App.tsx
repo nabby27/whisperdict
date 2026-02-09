@@ -5,17 +5,17 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Progress } from "./components/ui/progress";
 import { Textarea } from "./components/ui/textarea";
-import { createEcoApi, type EcoStatus, type ModelState } from "./lib/ecoApi";
+import { createWhisperdictApi, type ModelState, type WhisperdictStatus } from "./lib/whisperdictApi";
 import { cn } from "./lib/utils";
 
-const statusLabels: Record<EcoStatus, string> = {
+const statusLabels: Record<WhisperdictStatus, string> = {
   idle: "Idle",
   recording: "Recording",
   processing: "Transcribing",
   error: "Error",
 };
 
-const statusColors: Record<EcoStatus, string> = {
+const statusColors: Record<WhisperdictStatus, string> = {
   idle: "text-success",
   recording: "text-danger",
   processing: "text-accent",
@@ -124,7 +124,7 @@ const LANGUAGE_OPTIONS = [
   { code: "zh", label: "Chinese" },
 ];
 
-const PRO_LANDING_URL = "https://eco.app";
+const PRO_LANDING_URL = "https://whisperdict.app";
 
 const formatModelSize = (sizeMb: number) => {
   if (!Number.isFinite(sizeMb)) return "--";
@@ -134,13 +134,13 @@ const formatModelSize = (sizeMb: number) => {
 };
 
 function App() {
-  const api = useMemo(() => createEcoApi(), []);
+  const api = useMemo(() => createWhisperdictApi(), []);
   const [models, setModels] = useState<ModelState[]>([]);
   const [shortcut, setShortcut] = useState("Ctrl+Alt+Space");
   const [language, setLanguage] = useState("en");
   const [languageInput, setLanguageInput] = useState("English (en)");
   const [remainingTranscriptions, setRemainingTranscriptions] = useState(50);
-  const [status, setStatus] = useState<EcoStatus>("idle");
+  const [status, setStatus] = useState<WhisperdictStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<Record<string, number>>({});
   const [testText, setTestText] = useState("");
@@ -318,7 +318,7 @@ function App() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card p-1">
-                  <img src="/ECO-logo.svg" alt="ECO" className="h-full w-full rounded-md" />
+                  <img src="/whisperdict-logo.svg" alt="Whisperdict" className="h-full w-full rounded-md" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
@@ -349,7 +349,7 @@ function App() {
                 Local dictation without friction.
               </h1>
               <p className="text-pretty text-base text-muted">
-                Eco transcribes in the background. Control the shortcut, review text, and manage
+                Whisperdict transcribes in the background. Control the shortcut, review text, and manage
                 models without breaking flow.
               </p>
               {statusMessage && (
@@ -369,7 +369,7 @@ function App() {
                     <span className="text-sm text-muted"> ({remainingTranscriptions} left)</span>.
                   </span>
                   <span className="text-sm text-muted">
-                    Unlock ECO Pro to support the creator and get unlimited usage.
+                    Unlock Whisperdict Pro to support the creator and get unlimited usage.
                   </span>
                 </div>
                 <Button

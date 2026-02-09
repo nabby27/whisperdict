@@ -15,8 +15,8 @@ use serde::Serialize;
 use tauri::{image::Image, AppHandle, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
 
-const UPDATER_ENDPOINT: Option<&str> = option_env!("ECO_UPDATER_ENDPOINT");
-const UPDATER_PUBKEY: Option<&str> = option_env!("ECO_UPDATER_PUBKEY");
+const UPDATER_ENDPOINT: Option<&str> = option_env!("WHISPERDICT_UPDATER_ENDPOINT");
+const UPDATER_PUBKEY: Option<&str> = option_env!("WHISPERDICT_UPDATER_PUBKEY");
 
 #[derive(Serialize)]
 struct ModelState {
@@ -205,7 +205,7 @@ pub fn run() {
             get_status
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Eco");
+        .expect("error while running Whisperdict");
 }
 
 pub fn run_child() -> anyhow::Result<bool> {

@@ -64,7 +64,7 @@ const MODEL_LIST: &[ModelInfo] = &[
 
 pub fn models_dir() -> Result<PathBuf> {
     let dirs = BaseDirs::new().context("missing base dirs")?;
-    let dir = dirs.data_local_dir().join("ECO").join("models");
+    let dir = dirs.data_local_dir().join("Whisperdict").join("models");
     fs::create_dir_all(&dir).context("create models dir")?;
     Ok(dir)
 }

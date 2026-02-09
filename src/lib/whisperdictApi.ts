@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
-import { createMockEcoApi } from "./mockEcoApi";
+import { createMockWhisperdictApi } from "./mockWhisperdictApi";
 
-export type EcoStatus = "idle" | "recording" | "processing" | "error";
+export type WhisperdictStatus = "idle" | "recording" | "processing" | "error";
 
 export type ModelState = {
   id: string;
@@ -31,7 +31,7 @@ export type ConfigState = {
 };
 
 export type StatusPayload = {
-  status: EcoStatus;
+  status: WhisperdictStatus;
   message?: string;
 };
 
@@ -58,7 +58,7 @@ export type TranscriptionPayload = {
   durationMs?: number;
 };
 
-export interface EcoApi {
+export interface WhisperdictApi {
   getConfig(): Promise<ConfigState>;
   setShortcut(shortcut: string): Promise<void>;
   setLanguage(language: string): Promise<void>;
@@ -74,9 +74,9 @@ export interface EcoApi {
 
 const isMock = import.meta.env.VITE_E2E === "1";
 
-export function createEcoApi(): EcoApi {
+export function createWhisperdictApi(): WhisperdictApi {
   if (isMock) {
-    return createMockEcoApi();
+    return createMockWhisperdictApi();
   }
 
   return {

@@ -1,12 +1,12 @@
 import type {
   ConfigState,
-  EcoApi,
-  EcoStatus,
   ModelState,
   ProgressPayload,
   StatusPayload,
   TranscriptionPayload,
-} from "./ecoApi";
+  WhisperdictApi,
+  WhisperdictStatus,
+} from "./whisperdictApi";
 
 type Listener<T> = (payload: T) => void;
 
@@ -24,8 +24,8 @@ const catalog: ModelCatalogItem[] = [
   { id: "large", title: "Large", sizeMb: 2880 },
 ];
 
-export function createMockEcoApi(): EcoApi {
-  let status: EcoStatus = "idle";
+export function createMockWhisperdictApi(): WhisperdictApi {
+  let status: WhisperdictStatus = "idle";
   let config: ConfigState = {
     shortcut: "Ctrl+Alt+Space",
     activeModelId: "base",
@@ -121,7 +121,7 @@ export function createMockEcoApi(): EcoApi {
         emitStatus({ status: "processing" });
         setTimeout(() => {
           emitTranscription({
-            text: "Mock transcription: hello from Eco.",
+            text: "Mock transcription: hello from Whisperdict.",
             modelId: config.activeModelId,
             durationMs: 680,
           });
