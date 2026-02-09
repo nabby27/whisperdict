@@ -124,6 +124,8 @@ const LANGUAGE_OPTIONS = [
   { code: "zh", label: "Chinese" },
 ];
 
+const PRO_LANDING_URL = "https://eco.app";
+
 const formatModelSize = (sizeMb: number) => {
   if (!Number.isFinite(sizeMb)) return "--";
   if (sizeMb < 1024) return `${Math.round(sizeMb)} MB`;
@@ -137,6 +139,7 @@ function App() {
   const [shortcut, setShortcut] = useState("Ctrl+Alt+Space");
   const [language, setLanguage] = useState("en");
   const [languageInput, setLanguageInput] = useState("English (en)");
+  const [remainingTranscriptions, setRemainingTranscriptions] = useState(50);
   const [status, setStatus] = useState<EcoStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<Record<string, number>>({});
@@ -161,6 +164,7 @@ function App() {
         const code = config.language || "en";
         setLanguage(code);
         setLanguageInput(getLanguageLabel(code));
+        setRemainingTranscriptions(config.freeTranscriptionsLeft ?? 50);
       } catch (error) {
         setStatus("error");
         const message =
@@ -184,6 +188,7 @@ function App() {
     loadConfig();
     loadModels();
 
+
     const stopStatus = api.onStatus((payload) => {
       setStatus(payload.status);
       setStatusMessage(payload.message ?? null);
@@ -206,6 +211,7 @@ function App() {
     const stopTranscription = api.onTranscription((payload) => {
       setLastTranscript(payload.text);
       setLastDurationMs(payload.durationMs ?? null);
+      setRemainingTranscriptions((prev) => (prev > 0 ? prev - 1 : 0));
       const active = document.activeElement;
       const isFocusedTextarea =
         active instanceof HTMLTextAreaElement && active.dataset.testid === "test-textarea";
@@ -257,6 +263,7 @@ function App() {
     const loose = LANGUAGE_OPTIONS.find((item) => item.label.toLowerCase() === normalized);
     return loose?.code;
   };
+
 
   const handleDownload = async (id: string) => {
     setDownloads((prev) => ({ ...prev, [id]: 0 }));
@@ -354,6 +361,26 @@ function App() {
           </header>
 
           <main id="main" className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
+            <div className="col-span-full rounded-xl border border-border bg-background-2 px-5 py-4 shadow-subtle">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2 text-base font-medium text-foreground">
+                  <span>
+                    Free plan includes 50 transcriptions
+                    <span className="text-sm text-muted"> ({remainingTranscriptions} left)</span>.
+                  </span>
+                  <span className="text-sm text-muted">
+                    Unlock ECO Pro to support the creator and get unlimited usage.
+                  </span>
+                </div>
+                <Button
+                  variant="primary"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 whitespace-nowrap"
+                  onClick={() => window.open(PRO_LANDING_URL, "_blank", "noreferrer")}
+                >
+                  Get Pro
+                </Button>
+              </div>
+            </div>
             <section className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>

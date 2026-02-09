@@ -30,6 +30,7 @@ struct ConfigState {
     shortcut: String,
     active_model_id: String,
     language: String,
+    free_transcriptions_left: u32,
 }
 
 #[tauri::command]
@@ -39,6 +40,7 @@ fn get_config(state: State<'_, AppState>) -> Result<ConfigState, String> {
         shortcut: config.shortcut,
         active_model_id: config.active_model,
         language: config.language,
+        free_transcriptions_left: config.free_transcriptions_left,
     })
 }
 

@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub active_model: String,
     pub preferred_model: String,
     pub language: String,
+    pub free_transcriptions_left: u32,
 }
 
 impl Default for AppConfig {
@@ -20,6 +21,7 @@ impl Default for AppConfig {
             active_model: "base".to_string(),
             preferred_model: "base".to_string(),
             language: "en".to_string(),
+            free_transcriptions_left: 50,
         }
     }
 }

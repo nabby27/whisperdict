@@ -188,6 +188,15 @@ impl AppState {
         Ok(())
     }
 
+    fn decrement_transcriptions(&self) -> Result<()> {
+        let mut config = self.config.lock().unwrap();
+        if config.free_transcriptions_left > 0 {
+            config.free_transcriptions_left -= 1;
+            save_config(&config)?;
+        }
+        Ok(())
+    }
+
     pub async fn preload_transcribe_server(&self, app: &AppHandle) -> Result<()> {
         let config = self.config.lock().unwrap().clone();
         let model_id = config.active_model.clone();
@@ -294,6 +303,7 @@ impl AppState {
         let _ = fs::remove_file(&wav_path);
         if !text.is_empty() {
             let _ = paste_text(&text);
+            let _ = self.decrement_transcriptions();
         }
         let _ = app.emit(
             "transcription:result",

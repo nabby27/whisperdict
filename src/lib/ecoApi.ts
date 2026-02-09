@@ -27,6 +27,7 @@ export type ConfigState = {
   shortcut: string;
   activeModelId: string;
   language: string;
+  freeTranscriptionsLeft: number;
 };
 
 export type StatusPayload = {

@@ -30,6 +30,7 @@ export function createMockEcoApi(): EcoApi {
     shortcut: "Ctrl+Alt+Space",
     activeModelId: "base",
     language: "en",
+    freeTranscriptionsLeft: 50,
   };
 
   const installed = new Set(["base"]);
