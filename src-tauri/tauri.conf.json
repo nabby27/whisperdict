@@ -26,7 +26,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "targets": "all",
     "icon": [
       "icons-app/32x32.png",
@@ -35,5 +35,13 @@
       "icons-app/icon.icns",
       "icons-app/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhF1QAOwKWnaFJwoeneZPwCOsB2eZyzVnhOFdU8Qa5d0=\n-----END PUBLIC KEY-----",
+      "endpoints": [
+        "https://github.com/nabby27/whisperdict/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
