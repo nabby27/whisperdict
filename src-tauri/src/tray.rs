@@ -115,7 +115,7 @@ impl TrayController {
 
 fn render_icon(mode: TrayMode, frame: u8) -> Image<'static> {
     if matches!(mode, TrayMode::Idle | TrayMode::Error) {
-        if let Ok(icon) = Image::from_bytes(include_bytes!("../../public/whisperdict-logo.png")) {
+        if let Ok(icon) = Image::from_bytes(include_bytes!("../icons-app/32x32.png")) {
             return icon;
         }
     }

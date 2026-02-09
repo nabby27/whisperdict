@@ -18,7 +18,7 @@
       }
     ],
     "trayIcon": {
-      "iconPath": "icons/32x32.png"
+      "iconPath": "icons-app/32x32.png"
     },
     "security": {
       "csp": null
