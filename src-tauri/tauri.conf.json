@@ -26,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "copyright": "Copyright (c) 2026 Whisperdict contributors",
     "createUpdaterArtifacts": false,
     "targets": "all",
     "icon": [
