@@ -13,7 +13,7 @@
   <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-green.svg"></a>
 </p>
 
-<video src="./public/assets/demo.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/nabby27/whisperdict/main/public/assets/demo.mp4" controls muted playsinline width="100%"></video>
 
 ## What is Whisperdict?
 
