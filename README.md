@@ -9,11 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nabby27/whisperdict/actions/workflows/release.yml"><img alt="Release workflow" src="https://img.shields.io/github/actions/workflow/status/nabby27/whisperdict/release.yml?label=release"></a>
   <a href="https://github.com/nabby27/whisperdict/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/nabby27/whisperdict?sort=semver"></a>
-  <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2.x-24C8DB?logo=tauri&logoColor=white">
-  <img alt="React" src="https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white">
   <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-green.svg"></a>
 </p>
 
