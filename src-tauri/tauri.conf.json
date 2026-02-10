@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Whisperdict",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "identifier": "com.whisperdict.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -39,7 +39,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhF1QAOwKWnaFJwoeneZPwCOsB2eZyzVnhOFdU8Qa5d0=\n-----END PUBLIC KEY-----",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ2QzZFRTE1QTE4QjA1OTMKUldTVEJZdWhGZTdHUm13R2FqVnRTK0pCcFJDMXBSVFdYbGV1YWhUbjZzSk1FN0xzTzhwbEd1L2sK",
       "endpoints": [
         "https://github.com/nabby27/whisperdict/releases/latest/download/latest.json"
       ]
