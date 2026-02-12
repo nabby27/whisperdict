@@ -5983,7 +5983,7 @@ dependencies = [
 
 [[package]]
 name = "whisperdict"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "arboard",

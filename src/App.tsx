@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import packageMetadata from "../package.json";
 
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
@@ -140,6 +141,7 @@ const formatModelSize = (sizeMb: number) => {
 
 function App() {
   const api = useMemo(() => createWhisperdictApi(), []);
+  const appVersion = packageMetadata.version;
   const [models, setModels] = useState<ModelState[]>([]);
   const [shortcut, setShortcut] = useState("Ctrl+Alt+Space");
   const [language, setLanguage] = useState("en");
@@ -439,12 +441,17 @@ function App() {
           <header className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center p-1">
-                  <img
-                    src="/whisperdict-logo.png"
-                    alt="Whisperdict"
-                    className="h-full w-full rounded-md object-contain"
-                  />
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex h-10 w-10 items-center justify-center p-1">
+                    <img
+                      src="/whisperdict-logo.png"
+                      alt="Whisperdict"
+                      className="h-full w-full rounded-md object-contain"
+                    />
+                  </div>
+                  <p className="text-[10px] leading-none text-muted/40" data-testid="app-version">
+                    v{appVersion}
+                  </p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
