@@ -20,20 +20,27 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-updater = "2"
 arboard = "3.4.0"
 anyhow = "1.0.95"
 ashpd = { version = "0.12.0", default-features = false, features = ["tokio"] }
+base64 = "0.22.1"
 cpal = "0.15.3"
 directories = "5.0.1"
+ed25519-dalek = "2.1.1"
 enigo = "0.2.1"
 futures-util = "0.3.31"
 hound = "3.5.1"
  rdev = "0.5.3"
 reqwest = { version = "0.12.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+mac_address = "1.1.8"
+rsa = "0.9.7"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["raw_value"] }
+sha2 = { version = "0.10.8", features = ["oid"] }
+signature = "2.2.0"
 tempfile = "3.12.0"
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread", "time"] }

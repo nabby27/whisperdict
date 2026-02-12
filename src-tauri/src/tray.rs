@@ -40,7 +40,10 @@ impl TrayController {
             Ok(item) => item,
             Err(_) => return,
         };
-        let menu = match MenuBuilder::new(app).items(&[&show_item, &quit_item]).build() {
+        let menu = match MenuBuilder::new(app)
+            .items(&[&show_item, &quit_item])
+            .build()
+        {
             Ok(menu) => menu,
             Err(_) => return,
         };
@@ -165,15 +168,7 @@ fn draw_fallback_mark(data: &mut [u8], size: u32, color: (u8, u8, u8, u8)) {
         (3, 9),
         (4, 10),
     ];
-    let w_mid = [
-        (6, 6),
-        (6, 7),
-        (6, 8),
-        (7, 9),
-        (8, 8),
-        (8, 7),
-        (8, 6),
-    ];
+    let w_mid = [(6, 6), (6, 7), (6, 8), (7, 9), (8, 8), (8, 7), (8, 6)];
     let w_right = [
         (11, 3),
         (11, 4),

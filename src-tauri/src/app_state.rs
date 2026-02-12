@@ -1,6 +1,8 @@
 use crate::audio::resample_to_16k;
+use crate::command_errors::CommandError;
 use crate::config::{load_config, save_config, AppConfig};
 use crate::hotkeys::Hotkey;
+use crate::licensing;
 use crate::models;
 use crate::paste::paste_text;
 use crate::recording::RecorderWorker;
@@ -22,6 +24,8 @@ pub struct AppState {
     pub hotkey: Arc<Mutex<Hotkey>>,
     pub recorder: RecorderWorker,
     pub wayland_hotkeys: Option<WaylandHotkeys>,
+    license_public_keys: Vec<String>,
+    license_issuer: String,
     transcribe: Arc<Mutex<Option<TranscribeServer>>>,
 }
 
@@ -56,6 +60,7 @@ pub struct TranscriptionEvent {
 impl AppState {
     pub fn new(app: &AppHandle) -> Result<Self> {
         let mut config = load_config().unwrap_or_default();
+        licensing::sanitize_config(&mut config);
         let installed = models::list_models().unwrap_or_default();
         let installed_ids: Vec<String> = installed
             .into_iter()
@@ -82,6 +87,8 @@ impl AppState {
             hotkey: Arc::new(Mutex::new(hotkey)),
             recorder: RecorderWorker::new(),
             wayland_hotkeys,
+            license_public_keys: licensing::trusted_public_keys(),
+            license_issuer: licensing::license_issuer(),
             transcribe: Arc::new(Mutex::new(None)),
         };
         state.tray.start_animation();
@@ -188,12 +195,57 @@ impl AppState {
         Ok(())
     }
 
+    pub fn import_license_file(&self, path: &str) -> Result<licensing::LicenseImportResponse> {
+        let mut config = self.config.lock().unwrap();
+        let import_result = licensing::import_license_file(
+            path,
+            &mut config,
+            &self.license_public_keys,
+            &self.license_issuer,
+        );
+        save_config(&config)?;
+        match import_result {
+            Ok(()) => Ok(licensing::build_import_response(&config)),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub fn remove_license(&self) -> Result<()> {
+        let mut config = self.config.lock().unwrap();
+        licensing::clear_license(&mut config);
+        save_config(&config)?;
+        Ok(())
+    }
+
+    pub fn get_license_state(&self) -> Result<licensing::LicenseState> {
+        let mut config = self.config.lock().unwrap();
+        let validation = licensing::validate_current_license(
+            &mut config,
+            &self.license_public_keys,
+            &self.license_issuer,
+        )?;
+        save_config(&config)?;
+        Ok(licensing::build_license_state(&config, validation.message))
+    }
+
     fn decrement_transcriptions(&self) -> Result<()> {
         let mut config = self.config.lock().unwrap();
+        if config.entitlement == licensing::ENTITLEMENT_PRO
+            && config.license_status == licensing::LICENSE_STATUS_VALID
+        {
+            return Ok(());
+        }
         if config.free_transcriptions_left > 0 {
             config.free_transcriptions_left -= 1;
             save_config(&config)?;
         }
+        Ok(())
+    }
+
+    fn increment_total_transcriptions(&self) -> Result<()> {
+        let mut config = self.config.lock().unwrap();
+        config.total_transcriptions_count = config.total_transcriptions_count.saturating_add(1);
+        save_config(&config)?;
         Ok(())
     }
 
@@ -238,10 +290,38 @@ impl AppState {
         StatusResponse { recording }
     }
 
+    fn validate_recording_entitlement(&self, app: &AppHandle) -> Result<()> {
+        let mut config = self.config.lock().unwrap();
+        let validation = licensing::validate_current_license(
+            &mut config,
+            &self.license_public_keys,
+            &self.license_issuer,
+        )?;
+        let free_left = config.free_transcriptions_left;
+        save_config(&config)?;
+
+        if validation.is_pro() || free_left > 0 {
+            return Ok(());
+        }
+
+        self.tray.set_mode(TrayMode::Error);
+        let error = CommandError::free_limit_reached();
+        let _ = app.emit(
+            "status:changed",
+            serde_json::json!({
+                "status": "error",
+                "code": error.code,
+                "message": error.message,
+            }),
+        );
+        Err(error.into())
+    }
+
     pub fn start_recording(&self, app: &AppHandle) -> Result<()> {
         if self.recorder.is_recording() {
             return Ok(());
         }
+        self.validate_recording_entitlement(app)?;
         self.recorder.start().context("start recorder")?;
         self.tray.set_mode(TrayMode::Recording);
         let _ = app.emit(
@@ -303,6 +383,7 @@ impl AppState {
         let _ = fs::remove_file(&wav_path);
         if !text.is_empty() {
             let _ = paste_text(&text);
+            let _ = self.increment_total_transcriptions();
             let _ = self.decrement_transcriptions();
         }
         let _ = app.emit(
@@ -377,11 +458,12 @@ fn transcribe_with_server(
     if read == 0 || line.trim().is_empty() {
         *guard = Some(spawn_server(model_id, model_path)?);
         let srv = guard.as_mut().context("missing server")?;
-        writeln!(srv.stdin, "{}\t{}", language, wav_path)
-            .context("write wav path retry")?;
+        writeln!(srv.stdin, "{}\t{}", language, wav_path).context("write wav path retry")?;
         srv.stdin.flush().context("flush stdin retry")?;
         line.clear();
-        srv.stdout.read_line(&mut line).context("read child retry")?;
+        srv.stdout
+            .read_line(&mut line)
+            .context("read child retry")?;
     }
     Ok(line.trim().to_string())
 }

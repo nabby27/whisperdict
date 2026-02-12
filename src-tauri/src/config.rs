@@ -12,6 +12,11 @@ pub struct AppConfig {
     pub preferred_model: String,
     pub language: String,
     pub free_transcriptions_left: u32,
+    pub total_transcriptions_count: u64,
+    pub entitlement: String,
+    pub license_file_path: Option<String>,
+    pub license_status: String,
+    pub license_last_validated_at: Option<u64>,
 }
 
 impl Default for AppConfig {
@@ -22,6 +27,11 @@ impl Default for AppConfig {
             preferred_model: "base".to_string(),
             language: "en".to_string(),
             free_transcriptions_left: 50,
+            total_transcriptions_count: 0,
+            entitlement: "free".to_string(),
+            license_file_path: None,
+            license_status: "none".to_string(),
+            license_last_validated_at: None,
         }
     }
 }

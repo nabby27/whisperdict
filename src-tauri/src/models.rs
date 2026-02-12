@@ -76,7 +76,8 @@ pub fn list_models() -> Result<Vec<ModelStatus>> {
         .map(|model| ModelStatus {
             id: model.id.to_string(),
             size_mb: model.size_mb,
-            installed: dir.join(model.filename).exists() && model_is_valid(model.id).unwrap_or(false),
+            installed: dir.join(model.filename).exists()
+                && model_is_valid(model.id).unwrap_or(false),
             partial: dir.join(format!("{}.part", model.filename)).exists(),
         })
         .collect();
@@ -136,7 +137,9 @@ where
         }
     }
 
-    let mut file = tokio::fs::File::create(&temp_path).await.context("create temp")?;
+    let mut file = tokio::fs::File::create(&temp_path)
+        .await
+        .context("create temp")?;
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60 * 60))
@@ -178,6 +181,8 @@ where
     }
 
     file.flush().await.context("flush temp")?;
-    tokio::fs::rename(&temp_path, &path).await.context("rename model")?;
+    tokio::fs::rename(&temp_path, &path)
+        .await
+        .context("rename model")?;
     Ok(path)
 }

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Progress } from "./components/ui/progress";
 import { Textarea } from "./components/ui/textarea";
-import { createWhisperdictApi, type ModelState, type WhisperdictStatus } from "./lib/whisperdictApi";
+import {
+  createWhisperdictApi,
+  parseWhisperdictError,
+  type ModelState,
+  type WhisperdictStatus,
+} from "./lib/whisperdictApi";
 import { cn } from "./lib/utils";
 
 const statusLabels: Record<WhisperdictStatus, string> = {
@@ -124,8 +131,6 @@ const LANGUAGE_OPTIONS = [
   { code: "zh", label: "Chinese" },
 ];
 
-const PRO_LANDING_URL = "https://whisperdict.app";
-
 const formatModelSize = (sizeMb: number) => {
   if (!Number.isFinite(sizeMb)) return "--";
   if (sizeMb < 1024) return `${Math.round(sizeMb)} MB`;
@@ -140,8 +145,13 @@ function App() {
   const [language, setLanguage] = useState("en");
   const [languageInput, setLanguageInput] = useState("English (en)");
   const [remainingTranscriptions, setRemainingTranscriptions] = useState(50);
+  const [totalTranscriptionsCount, setTotalTranscriptionsCount] = useState(0);
+  const [planTier, setPlanTier] = useState<"free" | "pro">("free");
   const [status, setStatus] = useState<WhisperdictStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [isImportingLicense, setIsImportingLicense] = useState(false);
   const [downloads, setDownloads] = useState<Record<string, number>>({});
   const [testText, setTestText] = useState("");
   const [lastTranscript, setLastTranscript] = useState("");
@@ -150,10 +160,23 @@ function App() {
   const [isSavingShortcut, setIsSavingShortcut] = useState(false);
 
   const activeModel = models.find((model) => model.active);
+  const isProActive = planTier === "pro";
 
+  const resolvePlanTier = (entitlement?: string, licenseStatus?: string) =>
+    entitlement === "pro" && licenseStatus === "valid" ? "pro" : "free";
   const refreshModels = async () => {
     const list = await api.listModels();
     setModels(list);
+  };
+
+  const refreshLicenseState = async () => {
+    const next = await api.getLicenseState();
+    setRemainingTranscriptions(next.freeTranscriptionsLeft);
+    setTotalTranscriptionsCount(next.totalTranscriptionsCount ?? 0);
+    setPlanTier(resolvePlanTier(next.entitlement, next.licenseStatus));
+    if (next.message) {
+      setStatusMessage(next.message);
+    }
   };
 
   useEffect(() => {
@@ -165,33 +188,40 @@ function App() {
         setLanguage(code);
         setLanguageInput(getLanguageLabel(code));
         setRemainingTranscriptions(config.freeTranscriptionsLeft ?? 50);
+        setTotalTranscriptionsCount(config.totalTranscriptionsCount ?? 0);
+        setPlanTier(resolvePlanTier(config.entitlement, config.licenseStatus));
       } catch (error) {
         setStatus("error");
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Tauri is unavailable. Open the desktop app.";
-        setStatusMessage(message);
+        setStatusMessage(parseWhisperdictError(error).message);
       }
     };
+
     const loadModels = async () => {
       try {
         await refreshModels();
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Models could not be loaded. Try again.";
-        setStatusMessage(message);
+        setStatusMessage(parseWhisperdictError(error).message);
       }
     };
+
+    const loadLicenseState = async () => {
+      try {
+        await refreshLicenseState();
+      } catch (error) {
+        setStatusMessage(parseWhisperdictError(error).message);
+      }
+    };
+
     loadConfig();
     loadModels();
-
+    loadLicenseState();
 
     const stopStatus = api.onStatus((payload) => {
       setStatus(payload.status);
       setStatusMessage(payload.message ?? null);
+      if (payload.code === "FREE_LIMIT_REACHED") {
+        setIsLimitModalOpen(true);
+      }
     });
     const stopProgress = api.onProgress((payload) => {
       if (payload.done) {
@@ -211,14 +241,18 @@ function App() {
     const stopTranscription = api.onTranscription((payload) => {
       setLastTranscript(payload.text);
       setLastDurationMs(payload.durationMs ?? null);
-      setRemainingTranscriptions((prev) => (prev > 0 ? prev - 1 : 0));
       const active = document.activeElement;
       const isFocusedTextarea =
-        active instanceof HTMLTextAreaElement && active.dataset.testid === "test-textarea";
+        active instanceof HTMLTextAreaElement &&
+        active.dataset.testid === "test-textarea";
       if (isFocusedTextarea) {
+        refreshLicenseState().catch(() => undefined);
         return;
       }
-      setTestText((current) => (current ? `${current}\n${payload.text}` : payload.text));
+      setTestText((current) =>
+        current ? `${current}\n${payload.text}` : payload.text,
+      );
+      refreshLicenseState().catch(() => undefined);
     });
 
     return () => {
@@ -257,13 +291,14 @@ function App() {
     const direct = LANGUAGE_OPTIONS.find((item) => item.code === normalized);
     if (direct) return direct.code;
     const fromLabel = LANGUAGE_OPTIONS.find(
-      (item) => `${item.label} (${item.code})`.toLowerCase() === normalized
+      (item) => `${item.label} (${item.code})`.toLowerCase() === normalized,
     );
     if (fromLabel) return fromLabel.code;
-    const loose = LANGUAGE_OPTIONS.find((item) => item.label.toLowerCase() === normalized);
+    const loose = LANGUAGE_OPTIONS.find(
+      (item) => item.label.toLowerCase() === normalized,
+    );
     return loose?.code;
   };
-
 
   const handleDownload = async (id: string) => {
     setDownloads((prev) => ({ ...prev, [id]: 0 }));
@@ -273,7 +308,7 @@ function App() {
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm(
-      "Deleting this model removes its local files. Continue only if you want to free them."
+      "Deleting this model removes its local files. Continue only if you want to free them.",
     );
     if (!confirmed) return;
     await api.deleteModel(id);
@@ -289,12 +324,99 @@ function App() {
     try {
       await api.toggleRecording();
     } catch (error) {
+      const parsed = parseWhisperdictError(error);
       setStatus("error");
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Recording could not start. Try again.";
-      setStatusMessage(message);
+      setStatusMessage(parsed.message);
+      if (parsed.code === "FREE_LIMIT_REACHED") {
+        setIsLimitModalOpen(true);
+        refreshLicenseState().catch(() => undefined);
+      }
+    }
+  };
+
+  const openExternal = async (url: string) => {
+    try {
+      await openUrl(url);
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleGetPro = async () => {
+    setIsCreatingCheckout(true);
+    try {
+      const checkout = await api.createCheckoutSession();
+      await openExternal(checkout.checkoutUrl);
+    } catch (error) {
+      setStatus("error");
+      setStatusMessage(parseWhisperdictError(error).message);
+    } finally {
+      setIsCreatingCheckout(false);
+    }
+  };
+
+  const pickLicensePath = async (): Promise<string | null> => {
+    try {
+      const selected = await openFileDialog({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Whisperdict License JSON", extensions: ["json"] }],
+      });
+      if (typeof selected === "string") {
+        return selected;
+      }
+      if (import.meta.env.VITE_E2E === "1") {
+        return (
+          (
+            window as Window & {
+              __WHISPERDICT_MOCK__?: {
+                consumeNextLicensePath?: () => string | null;
+              };
+            }
+          ).__WHISPERDICT_MOCK__?.consumeNextLicensePath?.() ?? null
+        );
+      }
+      return null;
+    } catch {
+      if (import.meta.env.VITE_E2E === "1") {
+        return (
+          (
+            window as Window & {
+              __WHISPERDICT_MOCK__?: {
+                consumeNextLicensePath?: () => string | null;
+              };
+            }
+          ).__WHISPERDICT_MOCK__?.consumeNextLicensePath?.() ?? null
+        );
+      }
+      return null;
+    }
+  };
+
+  const handleImportLicenseFile = async () => {
+    setIsImportingLicense(true);
+    try {
+      const selectedPath = await pickLicensePath();
+      if (!selectedPath) {
+        return;
+      }
+
+      await api.importLicenseFile(selectedPath);
+      await refreshLicenseState();
+      setStatusMessage(null);
+      setIsLimitModalOpen(false);
+    } catch (error) {
+      const parsed = parseWhisperdictError(error);
+      if (parsed.code === "LICENSE_INVALID") {
+        setStatusMessage(
+          "License file is invalid. Please import a valid signed license JSON file.",
+        );
+      } else {
+        setStatusMessage(parsed.message);
+      }
+      refreshLicenseState().catch(() => undefined);
+    } finally {
+      setIsImportingLicense(false);
     }
   };
 
@@ -325,39 +447,70 @@ function App() {
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Status</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
+                    Status
+                  </p>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <span
                       aria-hidden="true"
                       className={cn(
                         "status-dot",
                         statusColors[status],
-                        status === "recording" ? "animate-status-pulse" : ""
+                        status === "recording" ? "animate-status-pulse" : "",
                       )}
                     />
-                    <span>{statusLabels[status]}</span>
+                    <span data-testid="status-label">
+                      {statusLabels[status]}
+                    </span>
                   </div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Button data-testid="dictate-toggle" onClick={handleToggleRecording}>
-                  {status === "recording" ? "Stop Dictation" : "Start Dictation"}
+                <Button
+                  data-testid="dictate-toggle"
+                  onClick={handleToggleRecording}
+                >
+                  {status === "recording"
+                    ? "Stop Dictation"
+                    : "Start Dictation"}
                 </Button>
                 <div className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted">
-                  Shortcut: <span className="font-medium text-foreground">{shortcut}</span>
+                  Shortcut:{" "}
+                  <span
+                    className="font-medium text-foreground"
+                    data-testid="active-shortcut"
+                  >
+                    {shortcut}
+                  </span>
                 </div>
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <h1 className="text-balance text-4xl font-semibold text-foreground">
-                Local dictation without friction.
-              </h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-balance text-4xl font-semibold text-foreground">
+                  Local dictation without friction.
+                </h1>
+                <Badge
+                  className={cn(
+                    "uppercase tracking-[0.16em]",
+                    planTier === "pro"
+                      ? "border-cyan-400/80 bg-cyan-400/10 text-cyan-200"
+                      : "border-border bg-card text-muted",
+                  )}
+                >
+                  {planTier === "pro" ? "PRO" : "FREE"}
+                </Badge>
+              </div>
               <p className="text-pretty text-base text-muted">
-                Whisperdict transcribes in the background. Control the shortcut, review text, and manage
-                models without breaking flow.
+                Whisperdict transcribes in the background. Control the shortcut,
+                review text, and manage models without breaking flow.
               </p>
               {statusMessage && (
-                <p className="text-sm text-danger" data-testid="status-message" aria-live="polite">
+                <p
+                  className="text-sm text-danger"
+                  data-testid="status-message"
+                  aria-live="polite"
+                >
                   {statusMessage}
                 </p>
               )}
@@ -365,34 +518,73 @@ function App() {
           </header>
 
           <main id="main" className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
-            <div className="col-span-full rounded-xl border border-border bg-background-2 px-5 py-4 shadow-subtle">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-base font-medium text-foreground">
-                  <span>
-                    Free plan includes 50 transcriptions
-                    <span className="text-sm text-muted"> ({remainingTranscriptions} left)</span>.
-                  </span>
-                  <span className="text-sm text-muted">
-                    Unlock Whisperdict Pro to support the creator and get unlimited usage.
-                  </span>
+            {isProActive && (
+              <div className="col-span-full rounded-xl border border-border bg-background-2 px-5 py-4 shadow-subtle">
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-medium text-foreground">
+                    You have completed {totalTranscriptionsCount.toLocaleString()} total transcriptions.
+                  </p>
                 </div>
-                <Button
-                  variant="primary"
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 whitespace-nowrap"
-                  onClick={() => window.open(PRO_LANDING_URL, "_blank", "noreferrer")}
-                >
-                  Get Pro
-                </Button>
               </div>
-            </div>
+            )}
+            {!isProActive && (
+              <div className="col-span-full rounded-xl border border-border bg-background-2 px-5 py-4 shadow-subtle">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-wrap items-center gap-2 text-base font-medium text-foreground">
+                    <span>
+                      Free plan includes 50 transcriptions
+                      <span className="text-sm text-muted">
+                        {" "}
+                        ({remainingTranscriptions} left)
+                      </span>
+                      .
+                    </span>
+                    <span className="text-sm text-muted">
+                      Upgrade to Pro for unlimited dictation, or import your
+                      signed license file.
+                    </span>
+                  </div>
+                  <div className="flex flex-nowrap items-center gap-2">
+                    <Button
+                      data-testid="get-pro-button"
+                      variant="primary"
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 whitespace-nowrap"
+                      onClick={handleGetPro}
+                      disabled={isCreatingCheckout}
+                    >
+                      Get Pro
+                    </Button>
+                    <Button
+                      data-testid="import-license-button"
+                      variant="secondary"
+                      className="whitespace-nowrap"
+                      onClick={handleImportLicenseFile}
+                      disabled={isImportingLicense}
+                    >
+                      {isImportingLicense
+                        ? "Importing..."
+                        : "Import License File"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <section className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Text</p>
-                  <p className="text-sm text-muted">Edit, copy, and clear in one place.</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
+                    Text
+                  </p>
+                  <p className="text-sm text-muted">
+                    Edit, copy, and clear in one place.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button data-testid="copy-button" variant="secondary" onClick={handleCopy}>
+                  <Button
+                    data-testid="copy-button"
+                    variant="secondary"
+                    onClick={handleCopy}
+                  >
                     Copy
                   </Button>
                   <Button
@@ -405,7 +597,10 @@ function App() {
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
-                <label htmlFor="test-textarea" className="text-xs font-semibold text-foreground">
+                <label
+                  htmlFor="test-textarea"
+                  className="text-xs font-semibold text-foreground"
+                >
                   Draft Area
                 </label>
                 <Textarea
@@ -419,7 +614,9 @@ function App() {
                 />
               </div>
               <div className="rounded-xl border border-border bg-background-2 px-4 py-3 text-xs text-muted">
-                <span className="font-semibold text-foreground">Last dictation:</span>{" "}
+                <span className="font-semibold text-foreground">
+                  Last dictation:
+                </span>{" "}
                 {lastTranscript || "No text yet."}{" "}
                 <span className="tabular-nums">
                   {lastDurationMs !== null
@@ -433,13 +630,20 @@ function App() {
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Shortcut</p>
-                    <p className="text-sm text-muted">Configure your global combo.</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
+                      Shortcut
+                    </p>
+                    <p className="text-sm text-muted">
+                      Configure your global combo.
+                    </p>
                   </div>
                   <Badge variant="default">System</Badge>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <label htmlFor="shortcut" className="text-xs font-semibold text-foreground">
+                  <label
+                    htmlFor="shortcut"
+                    className="text-xs font-semibold text-foreground"
+                  >
                     Current Shortcut
                   </label>
                   <Input
@@ -461,12 +665,18 @@ function App() {
                     >
                       {isSavingShortcut ? "Saving…" : "Save"}
                     </Button>
-                    <Button variant="outline" onClick={() => setShortcut("Ctrl+Alt+Space")}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShortcut("Ctrl+Alt+Space")}
+                    >
                       Reset
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="language" className="text-xs font-semibold text-foreground">
+                    <label
+                      htmlFor="language"
+                      className="text-xs font-semibold text-foreground"
+                    >
                       Language
                     </label>
                     <Input
@@ -474,7 +684,9 @@ function App() {
                       name="language"
                       list="language-options"
                       value={languageInput}
-                      onChange={(event) => handleLanguageChange(event.currentTarget.value)}
+                      onChange={(event) =>
+                        handleLanguageChange(event.currentTarget.value)
+                      }
                       placeholder="English (en)"
                     />
                     <datalist id="language-options">
@@ -492,7 +704,9 @@ function App() {
               <div className="rounded-xl border border-border bg-background-2 p-4 shadow-subtle">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Models</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
+                      Models
+                    </p>
                     <p className="text-sm text-muted">
                       Active: {activeModel ? activeModel.title : "No Model"}
                     </p>
@@ -520,8 +734,12 @@ function App() {
                                 </p>
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
-                                {model.active && <Badge variant="active">Active</Badge>}
-                                {model.partial && !model.installed && <Badge>Incomplete</Badge>}
+                                {model.active && (
+                                  <Badge variant="active">Active</Badge>
+                                )}
+                                {model.partial && !model.installed && (
+                                  <Badge>Incomplete</Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -531,7 +749,9 @@ function App() {
                                 data-testid={`model-${model.id}-download`}
                                 variant="primary"
                                 onClick={() => handleDownload(model.id)}
-                                disabled={progress !== undefined && progress < 100}
+                                disabled={
+                                  progress !== undefined && progress < 100
+                                }
                               >
                                 Download
                               </Button>
@@ -577,6 +797,54 @@ function App() {
           </main>
         </div>
       </div>
+      {isLimitModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="free-limit-modal-title"
+          data-testid="free-limit-modal"
+        >
+          <div className="w-full max-w-md rounded-xl border border-border bg-background-2 p-5 shadow-subtle">
+            <h2
+              id="free-limit-modal-title"
+              className="text-lg font-semibold text-foreground"
+            >
+              Free plan limit reached
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              You have used all 50 free transcriptions. Upgrade to Pro for
+              unlimited dictation, or import your signed license file.
+            </p>
+            <div className="mt-5 flex flex-nowrap justify-end gap-2">
+              <Button
+                data-testid="free-limit-dismiss"
+                variant="outline"
+                onClick={() => setIsLimitModalOpen(false)}
+              >
+                Maybe later
+              </Button>
+              <Button
+                data-testid="free-limit-import"
+                variant="secondary"
+                className="whitespace-nowrap"
+                onClick={handleImportLicenseFile}
+                disabled={isImportingLicense}
+              >
+                {isImportingLicense ? "Importing..." : "Import License File"}
+              </Button>
+              <Button
+                data-testid="free-limit-get-pro"
+                variant="primary"
+                onClick={handleGetPro}
+                disabled={isCreatingCheckout}
+              >
+                Get Pro
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
