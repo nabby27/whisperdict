@@ -169,26 +169,22 @@ fn remove_license(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 async fn check_for_updates(app: AppHandle) {
-    let Some(endpoint) = UPDATER_ENDPOINT else {
-        return;
-    };
-    let Some(pubkey) = UPDATER_PUBKEY else {
-        return;
-    };
+    let mut updater = app.updater_builder();
 
-    let endpoint = match endpoint.parse() {
-        Ok(endpoint) => endpoint,
-        Err(_) => return,
-    };
+    if let Some(pubkey) = UPDATER_PUBKEY {
+        updater = updater.pubkey(pubkey);
+    }
 
-    let updater = match app
-        .updater_builder()
-        .pubkey(pubkey)
-        .endpoints(vec![endpoint])
-    {
-        Ok(builder) => builder,
-        Err(_) => return,
-    };
+    if let Some(endpoint) = UPDATER_ENDPOINT {
+        let endpoint = match endpoint.parse() {
+            Ok(endpoint) => endpoint,
+            Err(_) => return,
+        };
+        updater = match updater.endpoints(vec![endpoint]) {
+            Ok(builder) => builder,
+            Err(_) => return,
+        };
+    }
 
     let updater = match updater.build() {
         Ok(updater) => updater,
@@ -287,9 +283,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init());
 
-    if let (Some(_), Some(pubkey)) = (UPDATER_ENDPOINT, UPDATER_PUBKEY) {
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(pubkey).build());
-    }
+    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
 
     builder
         .on_window_event(|window, event| {
