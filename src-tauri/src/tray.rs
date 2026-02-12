@@ -145,11 +145,12 @@ fn clear(data: &mut [u8]) {
     }
 }
 
-fn set_pixel(data: &mut [u8], size: u32, x: i32, y: i32, r: u8, g: u8, b: u8, a: u8) {
+fn set_pixel(data: &mut [u8], size: u32, x: i32, y: i32, color: (u8, u8, u8, u8)) {
     if x < 0 || y < 0 || x >= size as i32 || y >= size as i32 {
         return;
     }
     let idx = ((y as u32 * size + x as u32) * 4) as usize;
+    let (r, g, b, a) = color;
     data[idx] = r;
     data[idx + 1] = g;
     data[idx + 2] = b;
@@ -181,7 +182,7 @@ fn draw_fallback_mark(data: &mut [u8], size: u32, color: (u8, u8, u8, u8)) {
     ];
 
     for (x, y) in w_left.iter().chain(w_mid.iter()).chain(w_right.iter()) {
-        set_pixel(data, size, *x, *y, r, g, b, a);
+        set_pixel(data, size, *x, *y, (r, g, b, a));
     }
 }
 
@@ -209,7 +210,7 @@ fn draw_recording(data: &mut [u8], size: u32, frame: u8) {
         let top = center - h / 2;
         let bottom = center + h / 2;
         for y in top..=bottom {
-            set_pixel(data, size, *x, y, 255, 255, 255, 255);
+            set_pixel(data, size, *x, y, (255, 255, 255, 255));
         }
     }
 }
@@ -240,7 +241,7 @@ fn draw_processing(data: &mut [u8], size: u32, frame: u8) {
             let feather = 1.0 - (edge / thickness).min(1.0);
             let (r, g, b, a) = if in_arc { arc_color } else { base_color };
             let blended = (a as f32 * feather).round() as u8;
-            set_pixel(data, size, x, y, r, g, b, blended);
+            set_pixel(data, size, x, y, (r, g, b, blended));
         }
     }
 }

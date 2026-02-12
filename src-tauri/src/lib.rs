@@ -293,8 +293,8 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            let state = AppState::new(&app.handle()).map_err(command_errors::map_error)?;
-            state.tray.init(&app.handle());
+            let state = AppState::new(app.handle()).map_err(command_errors::map_error)?;
+            state.tray.init(app.handle());
             let hotkey = state.hotkey.clone();
             let handle = app.handle().clone();
             let _ = hotkeys::start_listener(handle, hotkey);
