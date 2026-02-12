@@ -1,79 +1,110 @@
 # Whisperdict
 
 <p align="center">
-  Local voice dictation for your desktop. Press a shortcut, speak, and paste text where you are working.
-</p>
-
-<p align="center">
-  Inspired by Superwhisper, built for Linux, and designed for full privacy with 100% local processing.
+  <strong>Private, offline voice dictation for Linux.</strong><br/>
+  Press a shortcut. Speak. Get text where your cursor is.<br/>
+  No cloud. No tracking. No nonsense.
 </p>
 
 <p align="center">
   <a href="https://github.com/nabby27/whisperdict/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/nabby27/whisperdict?sort=semver"></a>
   <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-green.svg"></a>
+  <img alt="Linux focused" src="https://img.shields.io/badge/Platform-Linux-blue">
+  <img alt="Runs locally" src="https://img.shields.io/badge/Processing-100%25%20Local-black">
 </p>
 
 ![Whisperdict demo](./public/assets/demo.gif)
 
-## What is Whisperdict?
+## Why Whisperdict?
 
-Whisperdict is a desktop app built with Tauri, Rust, and React that gives you quick voice dictation with local Whisper models. It is inspired by Superwhisper, focused on Linux users, and designed to stay out of your way:
+Most dictation tools:
 
-- Press your global shortcut.
-- Speak naturally.
-- Get transcription pasted into your active app.
+- Send your voice to the cloud.
+- Require subscriptions.
+- Barely support Linux.
+- Lock you into proprietary ecosystems.
 
-No browser tab juggling, no context switching.
+**Whisperdict does the opposite.**
 
-## Superwhisper-style experience for Linux, with full privacy
+- 🐧 Built for Linux users.
+- 🔒 100% offline processing.
+- 🧠 Runs local Whisper models on your machine.
+- 🚫 No audio ever leaves your device.
+- ⚡ Instant global shortcut workflow.
 
-- Inspired by the fast workflow popularized by Superwhisper.
-- Tailored for Linux desktop usage.
-- All transcription runs locally on your machine.
-- Your audio does not need to leave your device.
+If you care about privacy and want a good tool, this is for you.
 
-## Why people use it
+## What it does
 
-- Fast dictation flow with a global shortcut.
-- Local model options (`tiny` to `large`) with in-app download and management.
-- Language selection for multilingual dictation.
-- Clipboard + paste automation so text lands where you are working.
-- Lightweight desktop UI to monitor status, progress, and last transcript.
+1. Press your global shortcut (`Ctrl+Alt+Space` by default).
+2. Speak naturally.
+3. Text appears where your cursor is.
 
-## How it works
+No browser tabs.  
+No context switching.  
+No cloud latency.
 
-1. Whisperdict listens for your configured global shortcut (default `Ctrl+Alt+Space`).
-2. It records from your microphone.
-3. Audio is transcribed using the selected local Whisper model.
-4. Transcribed text is emitted to the app and can be pasted into your focused target.
+## Privacy by design
+
+Whisperdict uses local Whisper models via `whisper-rs`.
+
+That means:
+
+- Audio is processed entirely on your machine.
+- No API calls.
+- No telemetry.
+- No external servers.
+- Works fully offline.
+
+Airplane mode compatible.
+
+## Features
+
+- Global system-wide shortcut
+- Multiple local Whisper models (`tiny` → `large`)
+- In-app model download & management
+- Language selection
+- Automatic clipboard + paste injection
+- Lightweight desktop UI
+- Usage counter
+- Open source
 
 ## Installation
 
-### Download binaries
+### Download
 
-Grab the latest release from:
+Grab the latest release:
 
-- https://github.com/nabby27/whisperdict/releases
+👉 https://github.com/nabby27/whisperdict/releases
 
-## App behavior and defaults
+## Defaults
 
-- Default shortcut: `Ctrl+Alt+Space`
-- Default model: `base`
-- Default language: `en`
-- Free usage counter starts at `50` transcriptions
+- Shortcut: `Ctrl+Alt+Space`
+- Model: `base`
+- Language: `en`
+- Free usage counter: `50` transcriptions
 
-## Tech stack
+## Built With
 
-- Tauri 2 (desktop shell)
-- Rust backend (`whisper-rs`, audio capture, hotkeys, paste automation)
-- React + TypeScript frontend (Vite)
-- GitHub Actions release pipeline
+- Tauri 2
+- Rust (audio capture, hotkeys, whisper-rs, paste automation)
+- React + TypeScript (Vite)
+
+## Who is this for?
+
+- Developers on Linux
+- Privacy-conscious users
+- Writers who prefer speaking over typing
+- People tired of cloud dictation tools
+
+If you want Mac-style dictation on Linux — without giving your voice to Big Tech — this is it.
 
 ## Contributing
 
 Issues and PRs are welcome. If you find a bug or want a feature, open an issue with:
 
-- OS and desktop session details
+- OS/Linux distro
+- Desktop environment
 - Steps to reproduce
 - Expected vs actual behavior
 
