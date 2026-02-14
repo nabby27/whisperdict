@@ -1,21 +1,32 @@
 use crate::app_state::AppState;
 use anyhow::Result;
+#[cfg(target_os = "linux")]
 use ashpd::desktop::global_shortcuts::{GlobalShortcuts, NewShortcut};
+#[cfg(target_os = "linux")]
 use futures_util::StreamExt;
+#[cfg(target_os = "linux")]
 use std::env;
 use tauri::{AppHandle, Manager};
+#[cfg(target_os = "linux")]
 use tokio::sync::mpsc;
 
+#[cfg(target_os = "linux")]
 enum Command {
     Update(String),
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone)]
 pub struct WaylandHotkeys {
     tx: mpsc::Sender<Command>,
 }
 
+#[cfg(not(target_os = "linux"))]
+#[derive(Clone)]
+pub struct WaylandHotkeys;
+
 impl WaylandHotkeys {
+    #[cfg(target_os = "linux")]
     pub fn start(app: AppHandle, shortcut: String) -> Option<Self> {
         if env::var("WAYLAND_DISPLAY").is_err() {
             return None;
@@ -71,11 +82,21 @@ impl WaylandHotkeys {
         Some(Self { tx })
     }
 
+    #[cfg(not(target_os = "linux"))]
+    pub fn start(_app: AppHandle, _shortcut: String) -> Option<Self> {
+        None
+    }
+
+    #[cfg(target_os = "linux")]
     pub fn update(&self, shortcut: String) {
         let _ = self.tx.try_send(Command::Update(shortcut));
     }
+
+    #[cfg(not(target_os = "linux"))]
+    pub fn update(&self, _shortcut: String) {}
 }
 
+#[cfg(target_os = "linux")]
 async fn bind_shortcut(
     proxy: &GlobalShortcuts<'_>,
     session: &ashpd::desktop::Session<'_, GlobalShortcuts<'_>>,
@@ -91,6 +112,7 @@ async fn bind_shortcut(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn normalize_shortcut(input: &str) -> String {
     input.replace("Ctrl", "Control").replace("ALT", "Alt")
 }

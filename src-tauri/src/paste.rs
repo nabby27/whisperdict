@@ -22,11 +22,18 @@ pub fn paste_text(text: &str) -> Result<()> {
     }
 
     if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
-        let _ = enigo.key(EnigoKey::Control, Press);
+        #[cfg(target_os = "macos")]
+        let modifier = EnigoKey::Meta;
+        #[cfg(not(target_os = "macos"))]
+        let modifier = EnigoKey::Control;
+
+        let _ = enigo.key(modifier, Press);
+        #[cfg(target_os = "linux")]
         let _ = enigo.key(EnigoKey::Shift, Press);
         let _ = enigo.key(EnigoKey::Unicode('v'), Click);
+        #[cfg(target_os = "linux")]
         let _ = enigo.key(EnigoKey::Shift, Release);
-        let _ = enigo.key(EnigoKey::Control, Release);
+        let _ = enigo.key(modifier, Release);
         sleep(Duration::from_millis(20));
     }
     Ok(())
